@@ -178,7 +178,11 @@ public class OpenMDIInputFields {
 	@CsvBindByName
 	public String SURGDATE = "";
 	@CsvBindByName
-	public String HCPROVIDER = "";	
+	public String HCPROVIDER = "";
+	@CsvBindByName
+	public String CAUTOPSY = "";
+	@CsvBindByName
+	public String AUTOPUSED = "";
 	
 	public OpenMDIInputFields() {
 		
@@ -888,6 +892,22 @@ public class OpenMDIInputFields {
 		HCPROVIDER = hCPROVIDER;
 	}
 
+	public String getCAUTOPSY() {
+		return CAUTOPSY;
+	}
+
+	public void setCAUTOPSY(String cAUTOPSY) {
+		CAUTOPSY = cAUTOPSY;
+	}
+
+	public String getAUTOPUSED() {
+		return AUTOPUSED;
+	}
+
+	public void setAUTOPUSED(String aUTOPUSED) {
+		AUTOPUSED = aUTOPUSED;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -897,19 +917,21 @@ public class OpenMDIInputFields {
 		result = prime * result + ((ATHOSPDATE == null) ? 0 : ATHOSPDATE.hashCode());
 		result = prime * result + ((ATHOSPTIME == null) ? 0 : ATHOSPTIME.hashCode());
 		result = prime * result + ((ATWORK == null) ? 0 : ATWORK.hashCode());
+		result = prime * result + ((AUTOPUSED == null) ? 0 : AUTOPUSED.hashCode());
 		result = prime * result + ((BIRTHDATE == null) ? 0 : BIRTHDATE.hashCode());
-		result = prime * result + ((CASENOTES == null) ? 0 : CASENOTES.hashCode());
 		result = prime * result + ((CASEID == null) ? 0 : CASEID.hashCode());
+		result = prime * result + ((CASENOTES == null) ? 0 : CASENOTES.hashCode());
 		result = prime * result + ((CASEYEAR == null) ? 0 : CASEYEAR.hashCode());
 		result = prime * result + ((CAUSEA == null) ? 0 : CAUSEA.hashCode());
 		result = prime * result + ((CAUSEB == null) ? 0 : CAUSEB.hashCode());
 		result = prime * result + ((CAUSEC == null) ? 0 : CAUSEC.hashCode());
 		result = prime * result + ((CAUSED == null) ? 0 : CAUSED.hashCode());
-		result = prime * result + ((CIDATEFLAG == null) ? 0 : CIDATEFLAG.hashCode());
+		result = prime * result + ((CAUTOPSY == null) ? 0 : CAUTOPSY.hashCode());
 		result = prime * result + ((CDEATHDATE == null) ? 0 : CDEATHDATE.hashCode());
 		result = prime * result + ((CDEATHFLAG == null) ? 0 : CDEATHFLAG.hashCode());
 		result = prime * result + ((CDEATHTIME == null) ? 0 : CDEATHTIME.hashCode());
 		result = prime * result + ((CHOWNINJURY == null) ? 0 : CHOWNINJURY.hashCode());
+		result = prime * result + ((CIDATEFLAG == null) ? 0 : CIDATEFLAG.hashCode());
 		result = prime * result + ((CINJCITY == null) ? 0 : CINJCITY.hashCode());
 		result = prime * result + ((CINJCOUNTY == null) ? 0 : CINJCOUNTY.hashCode());
 		result = prime * result + ((CINJDATE == null) ? 0 : CINJDATE.hashCode());
@@ -1017,20 +1039,25 @@ public class OpenMDIInputFields {
 				return false;
 		} else if (!ATWORK.equals(other.ATWORK))
 			return false;
+		if (AUTOPUSED == null) {
+			if (other.AUTOPUSED != null)
+				return false;
+		} else if (!AUTOPUSED.equals(other.AUTOPUSED))
+			return false;
 		if (BIRTHDATE == null) {
 			if (other.BIRTHDATE != null)
 				return false;
 		} else if (!BIRTHDATE.equals(other.BIRTHDATE))
 			return false;
-		if (CASENOTES == null) {
-			if (other.CASENOTES != null)
-				return false;
-		} else if (!CASENOTES.equals(other.CASENOTES))
-			return false;
 		if (CASEID == null) {
 			if (other.CASEID != null)
 				return false;
 		} else if (!CASEID.equals(other.CASEID))
+			return false;
+		if (CASENOTES == null) {
+			if (other.CASENOTES != null)
+				return false;
+		} else if (!CASENOTES.equals(other.CASENOTES))
 			return false;
 		if (CASEYEAR == null) {
 			if (other.CASEYEAR != null)
@@ -1057,10 +1084,10 @@ public class OpenMDIInputFields {
 				return false;
 		} else if (!CAUSED.equals(other.CAUSED))
 			return false;
-		if (CIDATEFLAG == null) {
-			if (other.CIDATEFLAG != null)
+		if (CAUTOPSY == null) {
+			if (other.CAUTOPSY != null)
 				return false;
-		} else if (!CIDATEFLAG.equals(other.CIDATEFLAG))
+		} else if (!CAUTOPSY.equals(other.CAUTOPSY))
 			return false;
 		if (CDEATHDATE == null) {
 			if (other.CDEATHDATE != null)
@@ -1081,6 +1108,11 @@ public class OpenMDIInputFields {
 			if (other.CHOWNINJURY != null)
 				return false;
 		} else if (!CHOWNINJURY.equals(other.CHOWNINJURY))
+			return false;
+		if (CIDATEFLAG == null) {
+			if (other.CIDATEFLAG != null)
+				return false;
+		} else if (!CIDATEFLAG.equals(other.CIDATEFLAG))
 			return false;
 		if (CINJCITY == null) {
 			if (other.CINJCITY != null)
@@ -1437,32 +1469,35 @@ public class OpenMDIInputFields {
 
 	@Override
 	public String toString() {
-		return "OpenMDIInputFields [CASEID=" + CASEID + ", FIRSTNAME=" + FIRSTNAME + ", MIDNAME=" + MIDNAME + ", LASTNAME=" + LASTNAME
-				+ ", AGE=" + AGE + ", AGEUNIT=" + AGEUNIT + ", RACE=" + RACE + ", GENDER=" + GENDER + ", ETHNICITY="
-				+ ETHNICITY + ", BIRTHDATE=" + BIRTHDATE + ", SSNUMBER=" + SSNUMBER + ", JOBTITLE=" + JOBTITLE
-				+ ", MARITAL=" + MARITAL + ", POSSIBLEID=" + POSSIBLEID + ", CAUSEA=" + CAUSEA + ", CAUSEB=" + CAUSEB
-				+ ", CAUSEC=" + CAUSEC + ", CAUSED=" + CAUSED + ", OSCOND=" + OSCOND + ", MANNER=" + MANNER
-				+ ", CHOWNINJURY=" + CHOWNINJURY + ", DURATIONA=" + DURATIONA + ", DURATIONB=" + DURATIONB
-				+ ", DURATIONC=" + DURATIONC + ", DURATIOND=" + DURATIOND + ", CASENOTES=" + CASENOTES + ", ATWORK="
-				+ ATWORK + ", JOBRELATED=" + JOBRELATED + ", REPORTDATE=" + REPORTDATE + ", REPORTTIME=" + REPORTTIME
-				+ ", FOUNDDATE=" + FOUNDDATE + ", FOUNDTIME=" + FOUNDTIME + ", EVENTDATE=" + EVENTDATE + ", EVENTTIME="
-				+ EVENTTIME + ", PRNDATE=" + PRNDATE + ", PRNTIME=" + PRNTIME + ", EXAMDATE=" + EXAMDATE + ", CINJDATE="
-				+ CINJDATE + ", CINJTIME=" + CINJTIME + ", CIDATEFLAG=" + CIDATEFLAG + ", CDEATHFLAG=" + CDEATHFLAG
-				+ ", CDEATHTIME=" + CDEATHTIME + ", LKADATE=" + LKADATE + ", LKATIME=" + LKATIME + ", CASEYEAR="
-				+ CASEYEAR + ", ATHOSPDATE=" + ATHOSPDATE + ", ATHOSPTIME=" + ATHOSPTIME + ", RESSTREET=" + RESSTREET
-				+ ", RESCITY=" + RESCITY + ", RESCOUNTY=" + RESCOUNTY + ", RESSTATE=" + RESSTATE + ", RESZIP=" + RESZIP
-				+ ", DEATHPLACE=" + DEATHPLACE + ", EVENTPLACE=" + EVENTPLACE + ", FOUNDADDR_STREET=" + FOUNDADDR_STREET
-				+ ", FOUNDADDR_CITY=" + FOUNDADDR_CITY + ", FOUNDADDR_COUNTY=" + FOUNDADDR_COUNTY + ", FOUNDADDR_STATE="
-				+ FOUNDADDR_STATE + ", FOUNDADDR_ZIP=" + FOUNDADDR_ZIP + ", EVENTADDR_STREET=" + EVENTADDR_STREET
-				+ ", EVENTADDR_CITY=" + EVENTADDR_CITY + ", EVENTADDR_COUNTY=" + EVENTADDR_COUNTY + ", EVENTADDR_STATE="
-				+ EVENTADDR_STATE + ", EVENTADDR_ZIP=" + EVENTADDR_ZIP + ", PRNPLACE=" + PRNPLACE + ", PRNSTREET="
-				+ PRNSTREET + ", PRNCITY=" + PRNCITY + ", PRNCOUNTY=" + PRNCOUNTY + ", PRNSTATE=" + PRNSTATE
-				+ ", PRNZIP=" + PRNZIP + ", CINJPLACE=" + CINJPLACE + ", CINJSTREET=" + CINJSTREET + ", CINJCITY="
-				+ CINJCITY + ", CINJCOUNTY=" + CINJCOUNTY + ", CINJSTATE=" + CINJSTATE + ", CINJZIP=" + CINJZIP
-				+ ", CDEATHDATE=" + CDEATHDATE + ", RESNAME=" + RESNAME + ", LKAWHERE=" + LKAWHERE + ", HOSPNAME="
-				+ HOSPNAME + ", SCENEADDR_STREET=" + SCENEADDR_STREET + ", SCENEADDR_CITY=" + SCENEADDR_CITY
-				+ ", SCENEADDR_COUNTY=" + SCENEADDR_COUNTY + ", SCENEADDR_STATE=" + SCENEADDR_STATE + ", SCENEADDR_ZIP="
-				+ SCENEADDR_ZIP + ", SURGERY=" + SURGERY + ", SURGDATE=" + SURGDATE + ", HCPROVIDER=" + HCPROVIDER
-				+ "]";
+		return "OpenMDIInputFields [CASEID=" + CASEID + ", FIRSTNAME=" + FIRSTNAME + ", MIDNAME=" + MIDNAME
+				+ ", LASTNAME=" + LASTNAME + ", AGE=" + AGE + ", AGEUNIT=" + AGEUNIT + ", RACE=" + RACE + ", GENDER="
+				+ GENDER + ", ETHNICITY=" + ETHNICITY + ", BIRTHDATE=" + BIRTHDATE + ", SSNUMBER=" + SSNUMBER
+				+ ", JOBTITLE=" + JOBTITLE + ", MARITAL=" + MARITAL + ", POSSIBLEID=" + POSSIBLEID + ", CAUSEA="
+				+ CAUSEA + ", CAUSEB=" + CAUSEB + ", CAUSEC=" + CAUSEC + ", CAUSED=" + CAUSED + ", OSCOND=" + OSCOND
+				+ ", MANNER=" + MANNER + ", CHOWNINJURY=" + CHOWNINJURY + ", DURATIONA=" + DURATIONA + ", DURATIONB="
+				+ DURATIONB + ", DURATIONC=" + DURATIONC + ", DURATIOND=" + DURATIOND + ", CASENOTES=" + CASENOTES
+				+ ", ATWORK=" + ATWORK + ", JOBRELATED=" + JOBRELATED + ", REPORTDATE=" + REPORTDATE + ", REPORTTIME="
+				+ REPORTTIME + ", FOUNDDATE=" + FOUNDDATE + ", FOUNDTIME=" + FOUNDTIME + ", EVENTDATE=" + EVENTDATE
+				+ ", EVENTTIME=" + EVENTTIME + ", PRNDATE=" + PRNDATE + ", PRNTIME=" + PRNTIME + ", EXAMDATE="
+				+ EXAMDATE + ", CINJDATE=" + CINJDATE + ", CINJTIME=" + CINJTIME + ", CIDATEFLAG=" + CIDATEFLAG
+				+ ", CDEATHFLAG=" + CDEATHFLAG + ", CDEATHTIME=" + CDEATHTIME + ", LKADATE=" + LKADATE + ", LKATIME="
+				+ LKATIME + ", CASEYEAR=" + CASEYEAR + ", ATHOSPDATE=" + ATHOSPDATE + ", ATHOSPTIME=" + ATHOSPTIME
+				+ ", RESSTREET=" + RESSTREET + ", RESCITY=" + RESCITY + ", RESCOUNTY=" + RESCOUNTY + ", RESSTATE="
+				+ RESSTATE + ", RESZIP=" + RESZIP + ", DEATHPLACE=" + DEATHPLACE + ", EVENTPLACE=" + EVENTPLACE
+				+ ", FOUNDADDR_STREET=" + FOUNDADDR_STREET + ", FOUNDADDR_CITY=" + FOUNDADDR_CITY
+				+ ", FOUNDADDR_COUNTY=" + FOUNDADDR_COUNTY + ", FOUNDADDR_STATE=" + FOUNDADDR_STATE + ", FOUNDADDR_ZIP="
+				+ FOUNDADDR_ZIP + ", EVENTADDR_STREET=" + EVENTADDR_STREET + ", EVENTADDR_CITY=" + EVENTADDR_CITY
+				+ ", EVENTADDR_COUNTY=" + EVENTADDR_COUNTY + ", EVENTADDR_STATE=" + EVENTADDR_STATE + ", EVENTADDR_ZIP="
+				+ EVENTADDR_ZIP + ", PRNPLACE=" + PRNPLACE + ", PRNSTREET=" + PRNSTREET + ", PRNCITY=" + PRNCITY
+				+ ", PRNCOUNTY=" + PRNCOUNTY + ", PRNSTATE=" + PRNSTATE + ", PRNZIP=" + PRNZIP + ", CINJPLACE="
+				+ CINJPLACE + ", CINJSTREET=" + CINJSTREET + ", CINJCITY=" + CINJCITY + ", CINJCOUNTY=" + CINJCOUNTY
+				+ ", CINJSTATE=" + CINJSTATE + ", CINJZIP=" + CINJZIP + ", CDEATHDATE=" + CDEATHDATE + ", RESNAME="
+				+ RESNAME + ", LKAWHERE=" + LKAWHERE + ", HOSPNAME=" + HOSPNAME + ", SCENEADDR_STREET="
+				+ SCENEADDR_STREET + ", SCENEADDR_CITY=" + SCENEADDR_CITY + ", SCENEADDR_COUNTY=" + SCENEADDR_COUNTY
+				+ ", SCENEADDR_STATE=" + SCENEADDR_STATE + ", SCENEADDR_ZIP=" + SCENEADDR_ZIP + ", SURGERY=" + SURGERY
+				+ ", SURGDATE=" + SURGDATE + ", HCPROVIDER=" + HCPROVIDER + ", CAUTOPSY=" + CAUTOPSY + ", AUTOPUSED="
+				+ AUTOPUSED + "]";
 	}
+
+	
 }

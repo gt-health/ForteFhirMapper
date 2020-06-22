@@ -1,6 +1,8 @@
 package edu.gatech.Mapping.Service;
 
 import java.math.BigDecimal;
+import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -12,10 +14,7 @@ import org.hl7.fhir.r4.model.Age;
 import org.hl7.fhir.r4.model.Attachment;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
-import org.hl7.fhir.r4.model.Bundle.BundleEntryRequestComponent;
 import org.hl7.fhir.r4.model.Bundle.BundleType;
-import org.hl7.fhir.r4.model.Bundle.HTTPVerb;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.DateTimeType;
@@ -24,21 +23,25 @@ import org.hl7.fhir.r4.model.DocumentReference;
 import org.hl7.fhir.r4.model.DocumentReference.DocumentReferenceContentComponent;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Extension;
+import org.hl7.fhir.r4.model.HumanName;
+import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.ListResource.ListEntryComponent;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Observation.ObservationComponentComponent;
 import org.hl7.fhir.r4.model.Observation.ObservationStatus;
-import org.hl7.fhir.r4.model.HumanName;
-import org.hl7.fhir.r4.model.Identifier;
+import org.hl7.fhir.r4.model.Procedure;
 import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.StringType;
+import org.springframework.stereotype.Service;
 
+import ca.uhn.fhir.parser.IParser;
 import edu.gatech.Mapping.Util.OpenMDIToVRDRUtil;
 import edu.gatech.OpenMDI.model.OpenMDIInputFields;
+import edu.gatech.VRDR.context.VRDRFhirContext;
+import edu.gatech.VRDR.model.AutopsyPerformedIndicator;
 import edu.gatech.VRDR.model.CauseOfDeathCondition;
 import edu.gatech.VRDR.model.CauseOfDeathPathway;
-import edu.gatech.VRDR.model.DeathCertificateDocument;
 import edu.gatech.VRDR.model.DeathDate;
 import edu.gatech.VRDR.model.DeathLocation;
 import edu.gatech.VRDR.model.Decedent;
@@ -46,42 +49,50 @@ import edu.gatech.VRDR.model.DecedentAge;
 import edu.gatech.VRDR.model.DecedentEmploymentHistory;
 import edu.gatech.VRDR.model.ExaminerContacted;
 import edu.gatech.VRDR.model.InjuryIncident;
+import edu.gatech.VRDR.model.InjuryLocation;
 import edu.gatech.VRDR.model.MannerOfDeath;
 import edu.gatech.VRDR.model.util.InjuryIncidentUtil;
 
+@Service
 public class OpenMDIToVRDRService {
-	public String convertToVRDRString(OpenMDIInputFields inputFields) {
-		return "";
+	
+	public String convertToVRDRString(OpenMDIInputFields inputFields) throws ParseException {
+		Bundle fullBundle = convertToVRDR(inputFields);
+		IParser parser = new VRDRFhirContext().getCtx().newJsonParser();
+		String returnString = parser.encodeResourceToString(fullBundle);
+		return returnString;
 	}
-	public Bundle convertToVRDR(OpenMDIInputFields inputFields) {
+	
+	public Bundle convertToVRDR(OpenMDIInputFields inputFields) throws ParseException {
 		Bundle returnBundle = new Bundle();
-		returnBundle.setType(BundleType.TRANSACTION);
+		returnBundle.setType(BundleType.BATCH);
 		// Handle Decedent
 		Stream<String> decedentFields = Stream.of(inputFields.FIRSTNAME,inputFields.MIDNAME,inputFields.LASTNAME
 				,inputFields.AGE,inputFields.AGEUNIT,inputFields.RACE,inputFields.GENDER
 				,inputFields.ETHNICITY,inputFields.BIRTHDATE,inputFields.SSNUMBER
 				,inputFields.MARITAL,inputFields.POSSIBLEID,inputFields.RESSTREET
 				,inputFields.RESCITY,inputFields.RESCOUNTY,inputFields.RESSTATE
-				,inputFields.RESZIP);
+				,inputFields.RESZIP,inputFields.RESNAME,inputFields.LKAWHERE,inputFields.HOSPNAME
+				,inputFields.CASEID);
 		Decedent decedentResource = null;
 		Reference decedentReference = null;
 		if(!decedentFields.allMatch(x -> x == null || x.isEmpty())) {
 			decedentResource = createDecedent(inputFields);
-			decedentReference = new Reference(decedentResource);
+			decedentReference = new Reference(decedentResource.getId());
 			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, decedentResource);
 		}
 		// Handle DecedentAge
 		DecedentAge decedentAge = null;
 		Stream<String> ageFields = Stream.of(inputFields.AGE,inputFields.AGEUNIT, inputFields.PRNDATE, inputFields.PRNTIME);
 		if(!ageFields.allMatch(x -> x == null || x.isEmpty())) {
-			decedentAge = createDecedentAge(inputFields);
+			decedentAge = createDecedentAge(inputFields, decedentReference);
 			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, decedentAge);
 		}
 		// Handle Employment History
 		Stream<String> employmentHistoryFields = Stream.of(inputFields.JOBTITLE);
 		DecedentEmploymentHistory decedentEmploymentHistory = null;
 		if(!employmentHistoryFields.allMatch(x -> x == null || x.isEmpty())) {
-			decedentEmploymentHistory = createDecedentEmploymentHistory(inputFields);
+			decedentEmploymentHistory = createDecedentEmploymentHistory(inputFields, decedentReference);
 			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, decedentEmploymentHistory);
 		}
 		// Handle Cause Of Death Pathway
@@ -125,10 +136,11 @@ public class OpenMDIToVRDRService {
 			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, found);
 		}
 		// Handle Death Date
-		Stream<String> deathDateFields = Stream.of(inputFields.PRNDATE, inputFields.PRNTIME, inputFields.CDEATHFLAG);
+		Stream<String> deathDateFields = Stream.of(inputFields.PRNDATE, inputFields.PRNTIME, inputFields.CDEATHFLAG,
+				inputFields.CDEATHDATE);
 		if(!deathDateFields.allMatch(x -> x == null || x.isEmpty())) {
-			Observation found = createFoundObs(inputFields, decedentReference);
-			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, found);
+			DeathDate deathDate = createDeathDate(inputFields, decedentReference);
+			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, deathDate);
 		}
 		// Handle Date Examined Observation
 		Stream<String> dateExaminedFields = Stream.of(inputFields.EXAMDATE);
@@ -156,16 +168,38 @@ public class OpenMDIToVRDRService {
 		}
 		// Handle Death Location
 		Stream<String> deathLocFields = Stream.of(inputFields.DEATHPLACE, inputFields.EVENTPLACE
-				,inputFields.FOUNDADDR_STREET,inputFields.FOUNDADDR_CITY,inputFields.FOUNDADDR_COUNTY
-				,inputFields.FOUNDADDR_STATE,inputFields.FOUNDADDR_ZIP);
+				,inputFields.FOUNDADDR_STREET,inputFields.FOUNDADDR_CITY,inputFields.FOUNDADDR_COUNTY,
+				inputFields.FOUNDADDR_STATE,inputFields.FOUNDADDR_ZIP,inputFields.PRNPLACE,inputFields.PRNSTREET,
+				inputFields.PRNCITY,inputFields.PRNCOUNTY,inputFields.PRNSTATE,inputFields.PRNZIP,
+				inputFields.SCENEADDR_STREET,inputFields.SCENEADDR_CITY,inputFields.SCENEADDR_COUNTY,
+				inputFields.SCENEADDR_STATE,inputFields.SCENEADDR_ZIP);
 		if(!deathLocFields.allMatch(x -> x == null || x.isEmpty())) {
-			DeathLocation deathLocation = createDeathLocation(inputFields, decedentReference);
+			DeathLocation deathLocation = createDeathLocation(inputFields);
 			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, deathLocation);
+		}
+		// Handle Injury Location
+		Stream<String> injuryLocFields = Stream.of(inputFields.CINJSTREET,inputFields.CINJCITY,inputFields.CINJCOUNTY
+				,inputFields.CINJSTATE,inputFields.CINJZIP);
+		if(!injuryLocFields.allMatch(x -> x == null || x.isEmpty())) {
+			DeathLocation deathLocation = createDeathLocation(inputFields);
+			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, deathLocation);
+		}
+		// Handle Surgery
+		Stream<String> surgeryFields = Stream.of(inputFields.SURGERY,inputFields.SURGDATE);
+		if(!surgeryFields.allMatch(x -> x == null || x.isEmpty())) {
+			Procedure surgery = createSurgeryProc(inputFields, decedentReference);
+			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, surgery);
+		}
+		// Handle Autopsy
+		Stream<String> autopsyFields = Stream.of(inputFields.CAUTOPSY,inputFields.AUTOPUSED);
+		if(!autopsyFields.allMatch(x -> x == null || x.isEmpty())) {
+			AutopsyPerformedIndicator autopsy = createAutopsy(inputFields, decedentReference);
+			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, autopsy);
 		}
 		return returnBundle;
 	}
 	
-	private Decedent createDecedent(OpenMDIInputFields inputFields) {
+	private Decedent createDecedent(OpenMDIInputFields inputFields) throws ParseException {
 		Decedent returnDecedent = new Decedent();
 		if(inputFields.CASEID != null && !inputFields.CASEID.isEmpty()) {
 			returnDecedent.addIdentifier(new Identifier().setSystem("urn:mdi:temporary:code-caseNumber")
@@ -270,13 +304,40 @@ public class OpenMDIToVRDRService {
 		}
 		Address residentAddress = OpenMDIToVRDRUtil.createAddress(inputFields.RESSTREET,
 				inputFields.RESCITY, inputFields.RESCOUNTY, inputFields.RESSTATE, inputFields.RESZIP);
+		if(inputFields.RESNAME != null && !inputFields.RESNAME.isEmpty()) {
+			Extension resNameExt = new Extension();
+			resNameExt.setUrl("urn:oid:2.16.840.1.113883.11.20.9.49");
+			Extension resNameTextExt = new Extension();
+			resNameTextExt.setUrl("Text");
+			resNameTextExt.setValue(new StringType(inputFields.RESNAME));
+			resNameExt.addExtension(resNameTextExt);
+			residentAddress.addExtension(resNameTextExt);
+		}
 		residentAddress.setUse(AddressUse.HOME);
 		returnDecedent.addAddress(residentAddress);
+		if(inputFields.LKAWHERE != null && !inputFields.LKAWHERE.isEmpty()) {
+			Extension lkaExt = new Extension();
+			lkaExt.setUrl("urn:mdi:temporary:code:last-known-to-be-alive-or-okay-place");
+			lkaExt.setValue(new StringType(inputFields.LKAWHERE));
+			returnDecedent.addExtension(lkaExt);
+		}
+		if(inputFields.HOSPNAME != null && !inputFields.HOSPNAME.isEmpty()) {
+			Extension lkaExt = new Extension();
+			lkaExt.setUrl("urn:mdi:temporary:code:hospital-name-decedent-was-first-taken");
+			lkaExt.setValue(new StringType(inputFields.HOSPNAME));
+			returnDecedent.addExtension(lkaExt);
+		}
+		if(inputFields.CASEID != null && !inputFields.CASEID.isEmpty()) {
+			Identifier caseId = new Identifier();
+			caseId.setSystem("urn:mdi:temporary:code-caseNumber");
+			caseId.setValueElement(new StringType(inputFields.CASEID));
+		}
 		return returnDecedent;
 	}
 	
-	private DecedentAge createDecedentAge(OpenMDIInputFields inputFields) {
+	private DecedentAge createDecedentAge(OpenMDIInputFields inputFields, Reference decedentReference) {
 		DecedentAge returnObservation = new DecedentAge();
+		returnObservation.setSubject(decedentReference);
 		Quantity ageQuantity = new Quantity();
 		ageQuantity.setValue(new BigDecimal(inputFields.AGE)); //TODO: Check valid decimal
 		ageQuantity.setUnit(inputFields.AGEUNIT); //TODO: Check to make sure it's in system
@@ -286,14 +347,16 @@ public class OpenMDIToVRDRService {
 		return returnObservation;
 	}
 	
-	private DecedentEmploymentHistory createDecedentEmploymentHistory(OpenMDIInputFields inputFields) {
+	private DecedentEmploymentHistory createDecedentEmploymentHistory(OpenMDIInputFields inputFields, Reference decedentReference) {
 		DecedentEmploymentHistory returnEmploymentHistory = new DecedentEmploymentHistory();
+		returnEmploymentHistory.setSubject(decedentReference);
 		CodeableConcept usualOccupation = new CodeableConcept();
 		usualOccupation.setText(inputFields.JOBTITLE);
+		returnEmploymentHistory.addUsualOccupation(usualOccupation);
 		return returnEmploymentHistory;
 	}
 	
-	private InjuryIncident createInjuryIncident(OpenMDIInputFields inputFields, Reference decedenteReference) {
+	private InjuryIncident createInjuryIncident(OpenMDIInputFields inputFields, Reference decedenteReference) throws ParseException {
 		InjuryIncident returnIncident = new InjuryIncident();
 		if(inputFields.ATWORK !=  null && !inputFields.ATWORK.isEmpty()) {
 			boolean atWork = OpenMDIToVRDRUtil.parseBoolean(inputFields.ATWORK);
@@ -327,16 +390,17 @@ public class OpenMDIToVRDRService {
 		if(inputFields.CHOWNINJURY !=  null && !inputFields.CHOWNINJURY.isEmpty()) {
 			returnIncident.setValue(new StringType(inputFields.CHOWNINJURY));
 		}
-		Address eventAddress = OpenMDIToVRDRUtil.createAddress(inputFields.EVENTADDR_STREET, inputFields.EVENTADDR_CITY, inputFields.EVENTADDR_COUNTY,
-				inputFields.EVENTADDR_STATE, inputFields.EVENTADDR_ZIP);
 		
 		return returnIncident;
 	}
 	
 	private CauseOfDeathPathway createCauseOfDeathPathway(OpenMDIInputFields inputFields, Bundle bundle, Reference decedenteReference) {
 		CauseOfDeathPathway returnCoDPathway = new CauseOfDeathPathway();
-		List<String> causes = Arrays.asList(inputFields.CAUSEA,inputFields.CAUSEB,inputFields.CAUSEC,inputFields.CAUSED);
-		causes.addAll(Arrays.asList(inputFields.OSCOND.split(";")));
+		returnCoDPathway.setSubject(decedenteReference);
+		List<String> causes = new ArrayList<String>(Arrays.asList(inputFields.CAUSEA,inputFields.CAUSEB,inputFields.CAUSEC,inputFields.CAUSED));
+		String[] otherCauses = inputFields.OSCOND.split(";");
+		List<String> listArrayOtherCauses = Arrays.asList(otherCauses);
+		causes.addAll(listArrayOtherCauses);
 		List<String> durations = Arrays.asList(inputFields.DURATIONA,inputFields.DURATIONB,inputFields.DURATIONC,inputFields.DURATIOND);
 		for(int i = 0; i < causes.size(); i++) {
 			String cause = causes.get(i);
@@ -408,7 +472,7 @@ public class OpenMDIToVRDRService {
 		return caseNote;
 	}
 	
-	private ExaminerContacted createExaminerContacted(OpenMDIInputFields inputFields, Reference decedentReference) {
+	private ExaminerContacted createExaminerContacted(OpenMDIInputFields inputFields, Reference decedentReference) throws ParseException {
 		ExaminerContacted examinerContacted = new ExaminerContacted(true);
 		examinerContacted.setSubject(decedentReference);
 		if(inputFields.REPORTDATE != null && !inputFields.REPORTDATE.isEmpty()) {
@@ -419,13 +483,13 @@ public class OpenMDIToVRDRService {
 			if(inputFields.REPORTTIME != null && !inputFields.REPORTTIME.isEmpty()) {
 				OpenMDIToVRDRUtil.addTimeToDate(reportDate, inputFields.REPORTTIME);
 			}
-			component.setValue(new DateType(reportDate));
+			component.setValue(new DateTimeType(reportDate));
 			examinerContacted.addComponent(component);
 		}
 		return examinerContacted;
 	}
 	
-	private Observation createFoundObs(OpenMDIInputFields inputFields, Reference decedentReference) {
+	private Observation createFoundObs(OpenMDIInputFields inputFields, Reference decedentReference) throws ParseException {
 		Observation returnObs = new Observation();
 		returnObs.setStatus(ObservationStatus.FINAL);
 		returnObs.setSubject(decedentReference);
@@ -441,7 +505,7 @@ public class OpenMDIToVRDRService {
 		return returnObs;
 	}
 	
-	private DeathDate createDeathDate(OpenMDIInputFields inputFields, Reference decedentReference) {
+	private DeathDate createDeathDate(OpenMDIInputFields inputFields, Reference decedentReference) throws ParseException {
 		DeathDate returnDeathDate = new DeathDate();
 		returnDeathDate.setSubject(decedentReference);
 		//TODO: Add loction reference
@@ -452,16 +516,21 @@ public class OpenMDIToVRDRService {
 			}
 			returnDeathDate.addDatePronouncedDead(new DateTimeType(prnDate));
 		}
-		if(inputFields.CDEATHFLAG!= null && !inputFields.CDEATHFLAG.isEmpty()) {
+		if(inputFields.CDEATHFLAG != null && !inputFields.CDEATHFLAG.isEmpty()) {
 			Extension qualificationExtension = new Extension();
 			qualificationExtension.setUrl("urn:mdi:temporary:code:qualifiction-of-death-date");
 			qualificationExtension.setValue(new StringType(inputFields.CDEATHFLAG));
 			returnDeathDate.addExtension(qualificationExtension);
 		}
+		if(inputFields.CDEATHDATE != null && !inputFields.CDEATHDATE.isEmpty()) {
+			Extension isCertifiedExt = new Extension();
+			isCertifiedExt.setUrl("urn:mdi:temporary:code:is-certified");
+			isCertifiedExt.setValue(new BooleanType(OpenMDIToVRDRUtil.parseBoolean(inputFields.CDEATHDATE)));;
+		}
 		return returnDeathDate;
 	}
 	
-	private Observation createDateExaminedObs(OpenMDIInputFields inputFields, Reference decedentReference) {
+	private Observation createDateExaminedObs(OpenMDIInputFields inputFields, Reference decedentReference) throws ParseException {
 		Observation returnObs = new Observation();
 		returnObs.setStatus(ObservationStatus.FINAL);
 		returnObs.setSubject(decedentReference);
@@ -469,12 +538,12 @@ public class OpenMDIToVRDRService {
 				"urn:mdi:temporary:code", "1000003", "Date of examination or case review")));
 		if(inputFields.EXAMDATE != null && !inputFields.EXAMDATE.isEmpty()) {
 			Date reportDate = OpenMDIToVRDRUtil.parseDate(inputFields.EXAMDATE);
-			returnObs.setValue(new DateType(reportDate));
+			returnObs.setValue(new DateTimeType(reportDate));
 		}
 		return returnObs;
 	}
 	
-	private Observation createLKAObs(OpenMDIInputFields inputFields, Reference decedentReference) {
+	private Observation createLKAObs(OpenMDIInputFields inputFields, Reference decedentReference) throws ParseException {
 		Observation returnObs = new Observation();
 		returnObs.setStatus(ObservationStatus.FINAL);
 		returnObs.setSubject(decedentReference);
@@ -490,7 +559,7 @@ public class OpenMDIToVRDRService {
 		return returnObs;
 	}
 	
-	private Observation createCaseYearObs(OpenMDIInputFields inputFields, Reference decedentReference) {
+	private Observation createCaseYearObs(OpenMDIInputFields inputFields, Reference decedentReference) throws ParseException {
 		Observation returnObs = new Observation();
 		returnObs.setStatus(ObservationStatus.FINAL);
 		returnObs.setSubject(decedentReference);
@@ -498,12 +567,12 @@ public class OpenMDIToVRDRService {
 				"urn:mdi:temporary:code", "1000005", "Year by which case is categorized")));
 		if(inputFields.EXAMDATE != null && !inputFields.EXAMDATE.isEmpty()) {
 			Date reportDate = OpenMDIToVRDRUtil.parseDate(inputFields.CASEYEAR);
-			returnObs.setValue(new DateType(reportDate));
+			returnObs.setValue(new DateTimeType(reportDate));
 		}
 		return returnObs;
 	}
 	
-	private Observation createHospitalDateTime(OpenMDIInputFields inputFields, Reference decedentReference) {
+	private Observation createHospitalDateTime(OpenMDIInputFields inputFields, Reference decedentReference) throws ParseException {
 		Observation returnObs = new Observation();
 		returnObs.setStatus(ObservationStatus.FINAL);
 		returnObs.setSubject(decedentReference);
@@ -519,7 +588,7 @@ public class OpenMDIToVRDRService {
 		return returnObs;
 	}
 	
-	private DeathLocation createDeathLocation(OpenMDIInputFields inputFields, Reference decedentReference) {
+	private DeathLocation createDeathLocation(OpenMDIInputFields inputFields) {
 		DeathLocation returnDeathLocation = new DeathLocation();
 		if(inputFields.DEATHPLACE != null && !inputFields.DEATHPLACE.isEmpty()) {
 			Extension deathPlace = new Extension();
@@ -597,6 +666,58 @@ public class OpenMDIToVRDRService {
 				inputFields.FOUNDADDR_COUNTY, inputFields.FOUNDADDR_STATE, inputFields.FOUNDADDR_ZIP);
 		foundAddrExt.setValue(foundAddr);
 		returnDeathLocation.addExtension(foundAddrExt);
+		Extension prnExt = new Extension();
+		prnExt.setUrl("urn:mdi:temporary:code:pronounced-death-place");
+		Address pronouncedDeadAddr = OpenMDIToVRDRUtil.createAddress(inputFields.PRNSTREET, inputFields.PRNCITY,
+				inputFields.PRNCOUNTY, inputFields.PRNSTATE, inputFields.PRNZIP);
+		prnExt.setValue(pronouncedDeadAddr);
+		returnDeathLocation.addExtension(prnExt);
+		Extension sceneExt = new Extension();
+		sceneExt.setUrl("urn:mdi:temporary:code:pronounced-death-place");
+		Address sceneAddr = OpenMDIToVRDRUtil.createAddress(inputFields.SCENEADDR_STREET, inputFields.SCENEADDR_CITY,
+				inputFields.SCENEADDR_COUNTY, inputFields.SCENEADDR_STATE, inputFields.SCENEADDR_ZIP);
+		prnExt.setValue(pronouncedDeadAddr);
+		returnDeathLocation.addExtension(prnExt);
 		return returnDeathLocation;
+	}
+	
+	private InjuryLocation createInjuryLocation(OpenMDIInputFields inputFields) {
+		InjuryLocation returnInjuryLocation = new InjuryLocation();
+		Address eventAddress = OpenMDIToVRDRUtil.createAddress(inputFields.CINJSTREET, inputFields.CINJCITY, inputFields.CINJCOUNTY,
+				inputFields.CINJSTATE, inputFields.CINJZIP);
+		returnInjuryLocation.setAddress(eventAddress);
+		return returnInjuryLocation;
+	}
+	
+	private Procedure createSurgeryProc(OpenMDIInputFields inputFields, Reference decedentReference) throws ParseException {
+		Procedure returnProcedure = new Procedure();
+		returnProcedure.setSubject(decedentReference);
+		returnProcedure.setCategory(new CodeableConcept().addCoding(new Coding(
+				"http://snomed.info/sct","387713003","Surgical procedure")));
+		
+		if(inputFields.SURGERY != null && !inputFields.SURGERY.isEmpty()) {
+			returnProcedure.setCode(new CodeableConcept().setText(inputFields.SURGERY));
+		}
+		
+		if(inputFields.SURGDATE != null && !inputFields.SURGDATE.isEmpty()) {
+			Date reportDate = OpenMDIToVRDRUtil.parseDate(inputFields.SURGDATE);
+			returnProcedure.setPerformed(new DateType(reportDate));
+		}
+		return returnProcedure;
+	}
+	
+	private AutopsyPerformedIndicator createAutopsy(OpenMDIInputFields inputFields, Reference decedentReference) throws ParseException {
+		AutopsyPerformedIndicator autopsy = new AutopsyPerformedIndicator();
+		autopsy.setSubject(decedentReference);
+		if(inputFields.CAUTOPSY != null && !inputFields.CAUTOPSY.isEmpty()) {
+			autopsy.setValue(OpenMDIToVRDRUtil.parseBooleanAndCreateCode(inputFields.CAUTOPSY));
+		}
+		if(inputFields.AUTOPUSED != null && !inputFields.AUTOPUSED.isEmpty()) {
+			Extension autopsyUsedExt = new Extension();
+			autopsyUsedExt.setUrl("urn:mdi:temporary:code:autopsy-findings-were-used");
+			autopsyUsedExt.setValue(new BooleanType(OpenMDIToVRDRUtil.parseBoolean(inputFields.AUTOPUSED)));
+			autopsy.addExtension(autopsyUsedExt);
+		}
+		return autopsy;
 	}
 }

@@ -22,9 +22,9 @@ import edu.gatech.VRDR.model.util.CommonUtil;
 public class OpenMDIToVRDRUtil {
 	public static List<String> dateFormatStrings = Arrays.asList("MM/dd/yyyy",
 			"MM/dd/yy","dd-M-yyyy hh:mm:ss","dd MMMM yyyy","dd MMMM yyyy zzzz",
-			"E, dd MMM yyyy HH:mm:ss z","MM-dd-yy","MM-dd-yyyy", "MMMM DD, YYYY");
+			"E, dd MMM yyyy HH:mm:ss z","MM-dd-yy","MM-dd-yyyy", "MMMM DD, YYYY", "MMddyy", "YYYY");
 	public static List<String> timeFormatStrings = Arrays.asList("hh:mm:ss a", "hh:mm a",
-			"hh:mm:ss", "hh:mm");
+			"hh:mm:ss", "hh:mm","hhmm","hhmmss");
 	public static String ageRegex = "(\\d+)\\s*(year|month|week|day|hour|minute)";
 	public static String trueValueRegex = "yes|true";
 	public static String convertUnitOfMeasureStringToCode(String uomString) {
@@ -43,7 +43,7 @@ public class OpenMDIToVRDRUtil {
 				return "a";
 		}
 	}
-	public static Date parseDate(String dateString) {
+	public static Date parseDate(String dateString) throws ParseException {
 		for (String formatString : dateFormatStrings)
 	    {
 	        try
@@ -52,10 +52,9 @@ public class OpenMDIToVRDRUtil {
 	        }
 	        catch (ParseException e) {}
 	    }
-
-	    return null;
+		throw new ParseException("Could not format date: "+dateString, 0);
 	}
-	public static Date parseTime(String timeString) {
+	public static Date parseTime(String timeString) throws ParseException {
 		for (String formatString : timeFormatStrings)
 	    {
 	        try
@@ -64,10 +63,9 @@ public class OpenMDIToVRDRUtil {
 	        }
 	        catch (ParseException e) {}
 	    }
-
-	    return null;
+		throw new ParseException("Could not format time: "+timeString, 0);
 	}
-	public static Date addTimeToDate(Date date,String timeString) {
+	public static Date addTimeToDate(Date date,String timeString) throws ParseException {
 		Date timeDate = parseTime(timeString);
 		date.setHours(timeDate.getHours());
 		date.setMinutes(timeDate.getMinutes());
@@ -99,9 +97,10 @@ public class OpenMDIToVRDRUtil {
 	
 	public static Bundle addResourceToBundle(Bundle bundle,Resource resource) {
 		BundleEntryComponent bec = new BundleEntryComponent();
+		bec.setFullUrl(resource.getId());
 		bec.setRequest(new BundleEntryRequestComponent().setMethod(HTTPVerb.POST));
 		bec.setResource(resource);
-		bundle.addEntry(new BundleEntryComponent().setResource(resource));
+		bundle.addEntry(bec);
 		return bundle;
 	}
 	
