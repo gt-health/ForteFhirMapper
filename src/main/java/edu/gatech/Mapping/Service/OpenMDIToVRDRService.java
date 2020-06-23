@@ -400,9 +400,9 @@ public class OpenMDIToVRDRService {
 		return returnIncident;
 	}
 	
-	private CauseOfDeathPathway createCauseOfDeathPathway(OpenMDIInputFields inputFields, Bundle bundle, Reference decedenteReference, Certifier certifier) {
+	private CauseOfDeathPathway createCauseOfDeathPathway(OpenMDIInputFields inputFields, Bundle bundle, Reference decedentReference, Certifier certifier) {
 		CauseOfDeathPathway returnCoDPathway = new CauseOfDeathPathway();
-		returnCoDPathway.setSubject(decedenteReference);
+		returnCoDPathway.setSubject(decedentReference);
 		if (certifier != null) {
 			Reference certifierReference = new Reference(certifier);
 			returnCoDPathway.setSource(certifierReference);
@@ -417,8 +417,12 @@ public class OpenMDIToVRDRService {
 			String duration = (i < durations.size()) ? durations.get(i) : "";
 			if(cause != null && !cause.isEmpty()) {
 				CauseOfDeathCondition causeOfDeathCondition = new CauseOfDeathCondition();
-				causeOfDeathCondition.setSubject(decedenteReference);
-				causeOfDeathCondition.setCertifier(certifier);
+				if(decedentReference != null) {
+					causeOfDeathCondition.setSubject(decedentReference);
+				}
+				if(certifier != null) {
+					causeOfDeathCondition.setCertifier(certifier);
+				}
 				causeOfDeathCondition.setCode(new CodeableConcept().setText(cause));
 				if(!duration.isEmpty()) {
 					Age durationAge = OpenMDIToVRDRUtil.parseAge(duration);
