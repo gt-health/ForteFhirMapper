@@ -1,3 +1,4 @@
 [submodule "VRDR_javalib"]
 	path = VRDR_javalib
 	url = https://github.com/gt-health/VRDR_javalib
+	branch = r4
