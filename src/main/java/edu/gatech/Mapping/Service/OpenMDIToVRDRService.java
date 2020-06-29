@@ -205,9 +205,12 @@ public class OpenMDIToVRDRService {
 	
 	private Decedent createDecedent(OpenMDIInputFields inputFields) throws ParseException {
 		Decedent returnDecedent = new Decedent();
-		if(inputFields.CASEID != null && !inputFields.CASEID.isEmpty()) {
-			returnDecedent.addIdentifier(new Identifier().setSystem("urn:mdi:temporary:code-caseNumber")
-					.setValue(inputFields.CASEID));
+		Stream<String> caseIdFields = Stream.of(inputFields.SYSTEMID,inputFields.CASEID);
+		if(!caseIdFields.allMatch(x -> x == null || x.isEmpty())) {
+			Identifier identifier = new Identifier().setSystem(inputFields.SYSTEMID);
+			identifier.setValue(inputFields.CASEID);
+			identifier.setType(new CodeableConcept().addCoding(new Coding().setCode("1000007").setSystem("urn:mdi:temporary:code-caseNumber").setDisplay("Case Number")));
+			returnDecedent.addIdentifier(identifier);
 		}
 		Stream<String> nameFields = Stream.of(inputFields.FIRSTNAME,inputFields.LASTNAME,inputFields.MIDNAME,inputFields.POSSIBLEID);
 		if(!nameFields.allMatch(x -> x == null || x.isEmpty())) {
@@ -238,7 +241,7 @@ public class OpenMDIToVRDRService {
 			if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.ETHNICITY, "Not Hispanic")) {
 				returnDecedent.setEthnicity("2186-5", "", "Not Hispanic or Latino");
 			}
-			else if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.ETHNICITY, "Hispanic") || OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.ETHNICITY, "Latino")) {
+			else if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.ETHNICITY, "Hispanic") || OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.ETHNICITY, "Cuban") || OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.ETHNICITY, "Latino")) {
 				returnDecedent.setEthnicity("2135-2", "", "Hispanic or Latino");
 			}
 		}
@@ -258,8 +261,11 @@ public class OpenMDIToVRDRService {
 			returnDecedent.setBirthDate(birthDate);
 		}
 		if(inputFields.SSNUMBER != null && !inputFields.SSNUMBER.isEmpty()) {
-			returnDecedent.addIdentifier(new Identifier().setSystem("http://hl7.org/fhir/sid/us-ssn")
-					.setValue(inputFields.SSNUMBER));
+			Identifier identifier = new Identifier().setSystem("http://hl7.org/fhir/sid/us-ssn")
+					.setValue(inputFields.SSNUMBER);
+			identifier.setType(new CodeableConcept().addCoding(new Coding().setCode("SS")
+					.setSystem("http://terminology.hl7.org/CodeSystem/v2-0203").setDisplay("Social Security number")));
+			returnDecedent.addIdentifier(identifier);
 		}
 		if(inputFields.MARITAL != null && !inputFields.MARITAL.isEmpty()) {
 			Coding martialCoding = new Coding();
@@ -542,7 +548,7 @@ public class OpenMDIToVRDRService {
 		if(inputFields.CDEATHDATE != null && !inputFields.CDEATHDATE.isEmpty()) {
 			Extension isCertifiedExt = new Extension();
 			isCertifiedExt.setUrl("urn:mdi:temporary:code:is-certified");
-			isCertifiedExt.setValue(new BooleanType(OpenMDIToVRDRUtil.parseBoolean(inputFields.CDEATHDATE)));;
+			isCertifiedExt.setValue(new BooleanType(OpenMDIToVRDRUtil.parseBoolean(inputFields.CDEATHDATE)));
 		}
 		return returnDeathDate;
 	}
@@ -690,7 +696,7 @@ public class OpenMDIToVRDRService {
 		prnExt.setValue(pronouncedDeadAddr);
 		returnDeathLocation.addExtension(prnExt);
 		Extension sceneExt = new Extension();
-		sceneExt.setUrl("urn:mdi:temporary:code:pronounced-death-place");
+		sceneExt.setUrl("urn:mdi:temporary:code:scene-address");
 		Address sceneAddr = OpenMDIToVRDRUtil.createAddress(inputFields.SCENEADDR_STREET, inputFields.SCENEADDR_CITY,
 				inputFields.SCENEADDR_COUNTY, inputFields.SCENEADDR_STATE, inputFields.SCENEADDR_ZIP);
 		prnExt.setValue(pronouncedDeadAddr);
