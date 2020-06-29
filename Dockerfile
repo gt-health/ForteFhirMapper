@@ -1,7 +1,7 @@
 FROM maven:3.6.0-jdk-8 AS builder
 WORKDIR /usr/src/mdifhirmapping
 ADD . .
-RUN mvn clean install -DskipTests -f /usr/src/vrdrexport/VRDR_javalib/
+RUN mvn clean install -DskipTests -f /usr/src/mdifhirmapping/VRDR_javalib/
 RUN mvn clean install -DskipTests -f /usr/src/mdifhirmapping/
 
 FROM tomcat:latest
