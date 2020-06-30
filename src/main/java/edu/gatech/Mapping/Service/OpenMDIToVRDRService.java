@@ -115,7 +115,8 @@ public class OpenMDIToVRDRService {
 		}
 		// Handle Injury Incident
 		Stream<String> injuryIncidentFields = Stream.of(inputFields.CHOWNINJURY, inputFields.ATWORK,
-				inputFields.JOBRELATED, inputFields.EVENTDATE, inputFields.EVENTTIME, inputFields.CIDATEFLAG);
+				inputFields.JOBRELATED, inputFields.EVENTDATE, inputFields.EVENTTIME, inputFields.CIDATEFLAG,
+				inputFields.CUSTODY);
 		if(!injuryIncidentFields.allMatch(x -> x == null || x.isEmpty())) {
 			InjuryIncident injuryIncident = createInjuryIncident(inputFields, decedentReference, injuryLocation);
 			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, injuryIncident);
@@ -402,7 +403,11 @@ public class OpenMDIToVRDRService {
 		if(inputFields.CHOWNINJURY !=  null && !inputFields.CHOWNINJURY.isEmpty()) {
 			returnIncident.setValue(new StringType(inputFields.CHOWNINJURY));
 		}
-		
+		if(inputFields.CUSTODY !=  null && !inputFields.CUSTODY.isEmpty()) {
+			ObservationComponentComponent custodyComp = new ObservationComponentComponent();
+			custodyComp.setCode(new CodeableConcept().addCoding(new Coding("urn:mdi:temporary:code","100002","Death in custody")));
+			custodyComp.setValue(new BooleanType(OpenMDIToVRDRUtil.parseBoolean(inputFields.CUSTODY)));
+		}
 		return returnIncident;
 	}
 	

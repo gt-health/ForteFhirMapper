@@ -185,6 +185,8 @@ public class OpenMDIInputFields {
 	public String CAUTOPSY = "";
 	@CsvBindByName
 	public String AUTOPUSED = "";
+	@CsvBindByName
+	public String CUSTODY = "";
 	public boolean success = false;
 	
 	public OpenMDIInputFields() {
@@ -919,6 +921,14 @@ public class OpenMDIInputFields {
 		AUTOPUSED = aUTOPUSED;
 	}
 
+	public String getCUSTODY() {
+		return CUSTODY;
+	}
+
+	public void setCUSTODY(String cUSTODY) {
+		CUSTODY = cUSTODY;
+	}
+
 	public boolean isSuccess() {
 		return success;
 	}
@@ -959,6 +969,7 @@ public class OpenMDIInputFields {
 		result = prime * result + ((CINJSTREET == null) ? 0 : CINJSTREET.hashCode());
 		result = prime * result + ((CINJTIME == null) ? 0 : CINJTIME.hashCode());
 		result = prime * result + ((CINJZIP == null) ? 0 : CINJZIP.hashCode());
+		result = prime * result + ((CUSTODY == null) ? 0 : CUSTODY.hashCode());
 		result = prime * result + ((DEATHPLACE == null) ? 0 : DEATHPLACE.hashCode());
 		result = prime * result + ((DURATIONA == null) ? 0 : DURATIONA.hashCode());
 		result = prime * result + ((DURATIONB == null) ? 0 : DURATIONB.hashCode());
@@ -994,6 +1005,7 @@ public class OpenMDIInputFields {
 		result = prime * result + ((MANNER == null) ? 0 : MANNER.hashCode());
 		result = prime * result + ((MARITAL == null) ? 0 : MARITAL.hashCode());
 		result = prime * result + ((MIDNAME == null) ? 0 : MIDNAME.hashCode());
+		result = prime * result + ((MRNNUMBER == null) ? 0 : MRNNUMBER.hashCode());
 		result = prime * result + ((OSCOND == null) ? 0 : OSCOND.hashCode());
 		result = prime * result + ((POSSIBLEID == null) ? 0 : POSSIBLEID.hashCode());
 		result = prime * result + ((PRNCITY == null) ? 0 : PRNCITY.hashCode());
@@ -1018,7 +1030,6 @@ public class OpenMDIInputFields {
 		result = prime * result + ((SCENEADDR_STATE == null) ? 0 : SCENEADDR_STATE.hashCode());
 		result = prime * result + ((SCENEADDR_STREET == null) ? 0 : SCENEADDR_STREET.hashCode());
 		result = prime * result + ((SCENEADDR_ZIP == null) ? 0 : SCENEADDR_ZIP.hashCode());
-		result = prime * result + ((MRNNUMBER == null) ? 0 : MRNNUMBER.hashCode());
 		result = prime * result + ((SURGDATE == null) ? 0 : SURGDATE.hashCode());
 		result = prime * result + ((SURGERY == null) ? 0 : SURGERY.hashCode());
 		result = prime * result + ((SYSTEMID == null) ? 0 : SYSTEMID.hashCode());
@@ -1174,6 +1185,11 @@ public class OpenMDIInputFields {
 			if (other.CINJZIP != null)
 				return false;
 		} else if (!CINJZIP.equals(other.CINJZIP))
+			return false;
+		if (CUSTODY == null) {
+			if (other.CUSTODY != null)
+				return false;
+		} else if (!CUSTODY.equals(other.CUSTODY))
 			return false;
 		if (DEATHPLACE == null) {
 			if (other.DEATHPLACE != null)
@@ -1350,6 +1366,11 @@ public class OpenMDIInputFields {
 				return false;
 		} else if (!MIDNAME.equals(other.MIDNAME))
 			return false;
+		if (MRNNUMBER == null) {
+			if (other.MRNNUMBER != null)
+				return false;
+		} else if (!MRNNUMBER.equals(other.MRNNUMBER))
+			return false;
 		if (OSCOND == null) {
 			if (other.OSCOND != null)
 				return false;
@@ -1470,11 +1491,6 @@ public class OpenMDIInputFields {
 				return false;
 		} else if (!SCENEADDR_ZIP.equals(other.SCENEADDR_ZIP))
 			return false;
-		if (MRNNUMBER == null) {
-			if (other.MRNNUMBER != null)
-				return false;
-		} else if (!MRNNUMBER.equals(other.MRNNUMBER))
-			return false;
 		if (SURGDATE == null) {
 			if (other.SURGDATE != null)
 				return false;
@@ -1524,6 +1540,7 @@ public class OpenMDIInputFields {
 				+ HOSPNAME + ", SCENEADDR_STREET=" + SCENEADDR_STREET + ", SCENEADDR_CITY=" + SCENEADDR_CITY
 				+ ", SCENEADDR_COUNTY=" + SCENEADDR_COUNTY + ", SCENEADDR_STATE=" + SCENEADDR_STATE + ", SCENEADDR_ZIP="
 				+ SCENEADDR_ZIP + ", SURGERY=" + SURGERY + ", SURGDATE=" + SURGDATE + ", HCPROVIDER=" + HCPROVIDER
-				+ ", CAUTOPSY=" + CAUTOPSY + ", AUTOPUSED=" + AUTOPUSED + ", success=" + success + "]";
+				+ ", CAUTOPSY=" + CAUTOPSY + ", AUTOPUSED=" + AUTOPUSED + ", CUSTODY=" + CUSTODY + ", success="
+				+ success + "]";
 	}
 }
