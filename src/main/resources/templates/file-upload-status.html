@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"/>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+  <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <div class="container py-5">
     <div class="row">
@@ -29,6 +29,7 @@
                     <th scope="col">LASTNAME</th>
                     <th scope="col">Date Prn Dead</th>
                     <th scope="col">AGE</th>
+                    <th scope="col">Submission Received?</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -39,6 +40,8 @@
                     <td th:text="${case.LASTNAME}"></td>
                     <td th:text="${case.PRNDATE}"></td>
                     <td th:text="${case.AGE}"></td>
+                    <td th:if=${case.success}><span class="glyphicon glyphicon-ok"></span></td>
+                    <td th:unless=${case.success}><span class="glyphicon glyphicon-remove"></span></td>
                 </tr>
                 </tbody>
             </table>

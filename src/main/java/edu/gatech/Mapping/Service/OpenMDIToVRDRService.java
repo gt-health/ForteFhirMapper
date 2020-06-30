@@ -38,7 +38,7 @@ import org.springframework.stereotype.Service;
 
 import ca.uhn.fhir.parser.IParser;
 import edu.gatech.Mapping.Util.OpenMDIToVRDRUtil;
-import edu.gatech.OpenMDI.model.OpenMDIInputFields;
+import edu.gatech.OpenMDI.Model.OpenMDIInputFields;
 import edu.gatech.VRDR.context.VRDRFhirContext;
 import edu.gatech.VRDR.model.AutopsyPerformedIndicator;
 import edu.gatech.VRDR.model.CauseOfDeathCondition;
@@ -71,7 +71,7 @@ public class OpenMDIToVRDRService {
 		// Handle Decedent
 		Stream<String> decedentFields = Stream.of(inputFields.FIRSTNAME,inputFields.MIDNAME,inputFields.LASTNAME
 				,inputFields.AGE,inputFields.AGEUNIT,inputFields.RACE,inputFields.GENDER
-				,inputFields.ETHNICITY,inputFields.BIRTHDATE,inputFields.SSNUMBER
+				,inputFields.ETHNICITY,inputFields.BIRTHDATE,inputFields.MRNNUMBER
 				,inputFields.MARITAL,inputFields.POSSIBLEID,inputFields.RESSTREET
 				,inputFields.RESCITY,inputFields.RESCOUNTY,inputFields.RESSTATE
 				,inputFields.RESZIP,inputFields.RESNAME,inputFields.LKAWHERE,inputFields.HOSPNAME
@@ -209,7 +209,7 @@ public class OpenMDIToVRDRService {
 		if(!caseIdFields.allMatch(x -> x == null || x.isEmpty())) {
 			Identifier identifier = new Identifier().setSystem(inputFields.SYSTEMID);
 			identifier.setValue(inputFields.CASEID);
-			identifier.setType(new CodeableConcept().addCoding(new Coding().setCode("1000007").setSystem("urn:mdi:temporary:code-caseNumber").setDisplay("Case Number")));
+			identifier.setType(new CodeableConcept().addCoding(new Coding().setCode("1000007").setSystem("urn:mdi:temporary:code").setDisplay("Case Number")));
 			returnDecedent.addIdentifier(identifier);
 		}
 		Stream<String> nameFields = Stream.of(inputFields.FIRSTNAME,inputFields.LASTNAME,inputFields.MIDNAME,inputFields.POSSIBLEID);
@@ -260,11 +260,11 @@ public class OpenMDIToVRDRService {
 			Date birthDate = OpenMDIToVRDRUtil.parseDate(inputFields.BIRTHDATE);
 			returnDecedent.setBirthDate(birthDate);
 		}
-		if(inputFields.SSNUMBER != null && !inputFields.SSNUMBER.isEmpty()) {
+		if(inputFields.MRNNUMBER != null && !inputFields.MRNNUMBER.isEmpty()) {
 			Identifier identifier = new Identifier().setSystem("http://hl7.org/fhir/sid/us-ssn")
-					.setValue(inputFields.SSNUMBER);
-			identifier.setType(new CodeableConcept().addCoding(new Coding().setCode("SS")
-					.setSystem("http://terminology.hl7.org/CodeSystem/v2-0203").setDisplay("Social Security number")));
+					.setValue(inputFields.MRNNUMBER);
+			identifier.setType(new CodeableConcept().addCoding(new Coding().setCode("MR")
+					.setSystem("http://terminology.hl7.org/CodeSystem/v2-0203").setDisplay("Medical Record Number")));
 			returnDecedent.addIdentifier(identifier);
 		}
 		if(inputFields.MARITAL != null && !inputFields.MARITAL.isEmpty()) {
@@ -339,7 +339,7 @@ public class OpenMDIToVRDRService {
 		}
 		if(inputFields.CASEID != null && !inputFields.CASEID.isEmpty()) {
 			Identifier caseId = new Identifier();
-			caseId.setSystem("urn:mdi:temporary:code-caseNumber");
+			caseId.setSystem("urn:mdi:temporary:code");
 			caseId.setValueElement(new StringType(inputFields.CASEID));
 		}
 		return returnDecedent;

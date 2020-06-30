@@ -1,4 +1,4 @@
-package edu.gatech.OpenMDI.model;
+package edu.gatech.OpenMDI.Model;
 
 import com.opencsv.bean.CsvBindByName;
 
@@ -26,7 +26,7 @@ public class OpenMDIInputFields {
 	@CsvBindByName
 	public String BIRTHDATE = "";
 	@CsvBindByName
-	public String SSNUMBER = "";
+	public String MRNNUMBER = "";
 	@CsvBindByName
 	public String JOBTITLE = "";
 	@CsvBindByName
@@ -185,6 +185,7 @@ public class OpenMDIInputFields {
 	public String CAUTOPSY = "";
 	@CsvBindByName
 	public String AUTOPUSED = "";
+	public boolean success = false;
 	
 	public OpenMDIInputFields() {
 		
@@ -278,12 +279,12 @@ public class OpenMDIInputFields {
 		BIRTHDATE = bIRTHDATE;
 	}
 
-	public String getSSNUMBER() {
-		return SSNUMBER;
+	public String getMRNNUMBER() {
+		return MRNNUMBER;
 	}
 
-	public void setSSNUMBER(String sSNUMBER) {
-		SSNUMBER = sSNUMBER;
+	public void setMRNNUMBER(String mRNNUMBER) {
+		MRNNUMBER = mRNNUMBER;
 	}
 
 	public String getJOBTITLE() {
@@ -918,6 +919,14 @@ public class OpenMDIInputFields {
 		AUTOPUSED = aUTOPUSED;
 	}
 
+	public boolean isSuccess() {
+		return success;
+	}
+
+	public void setSuccess(boolean success) {
+		this.success = success;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -1009,10 +1018,11 @@ public class OpenMDIInputFields {
 		result = prime * result + ((SCENEADDR_STATE == null) ? 0 : SCENEADDR_STATE.hashCode());
 		result = prime * result + ((SCENEADDR_STREET == null) ? 0 : SCENEADDR_STREET.hashCode());
 		result = prime * result + ((SCENEADDR_ZIP == null) ? 0 : SCENEADDR_ZIP.hashCode());
-		result = prime * result + ((SSNUMBER == null) ? 0 : SSNUMBER.hashCode());
+		result = prime * result + ((MRNNUMBER == null) ? 0 : MRNNUMBER.hashCode());
 		result = prime * result + ((SURGDATE == null) ? 0 : SURGDATE.hashCode());
 		result = prime * result + ((SURGERY == null) ? 0 : SURGERY.hashCode());
 		result = prime * result + ((SYSTEMID == null) ? 0 : SYSTEMID.hashCode());
+		result = prime * result + (success ? 1231 : 1237);
 		return result;
 	}
 
@@ -1460,10 +1470,10 @@ public class OpenMDIInputFields {
 				return false;
 		} else if (!SCENEADDR_ZIP.equals(other.SCENEADDR_ZIP))
 			return false;
-		if (SSNUMBER == null) {
-			if (other.SSNUMBER != null)
+		if (MRNNUMBER == null) {
+			if (other.MRNNUMBER != null)
 				return false;
-		} else if (!SSNUMBER.equals(other.SSNUMBER))
+		} else if (!MRNNUMBER.equals(other.MRNNUMBER))
 			return false;
 		if (SURGDATE == null) {
 			if (other.SURGDATE != null)
@@ -1480,6 +1490,8 @@ public class OpenMDIInputFields {
 				return false;
 		} else if (!SYSTEMID.equals(other.SYSTEMID))
 			return false;
+		if (success != other.success)
+			return false;
 		return true;
 	}
 
@@ -1488,7 +1500,7 @@ public class OpenMDIInputFields {
 		return "OpenMDIInputFields [SYSTEMID=" + SYSTEMID + ", CASEID=" + CASEID + ", FIRSTNAME=" + FIRSTNAME
 				+ ", MIDNAME=" + MIDNAME + ", LASTNAME=" + LASTNAME + ", AGE=" + AGE + ", AGEUNIT=" + AGEUNIT
 				+ ", RACE=" + RACE + ", GENDER=" + GENDER + ", ETHNICITY=" + ETHNICITY + ", BIRTHDATE=" + BIRTHDATE
-				+ ", SSNUMBER=" + SSNUMBER + ", JOBTITLE=" + JOBTITLE + ", MARITAL=" + MARITAL + ", POSSIBLEID="
+				+ ", MRNNUMBER=" + MRNNUMBER + ", JOBTITLE=" + JOBTITLE + ", MARITAL=" + MARITAL + ", POSSIBLEID="
 				+ POSSIBLEID + ", CAUSEA=" + CAUSEA + ", CAUSEB=" + CAUSEB + ", CAUSEC=" + CAUSEC + ", CAUSED=" + CAUSED
 				+ ", OSCOND=" + OSCOND + ", MANNER=" + MANNER + ", CHOWNINJURY=" + CHOWNINJURY + ", DURATIONA="
 				+ DURATIONA + ", DURATIONB=" + DURATIONB + ", DURATIONC=" + DURATIONC + ", DURATIOND=" + DURATIOND
@@ -1512,6 +1524,6 @@ public class OpenMDIInputFields {
 				+ HOSPNAME + ", SCENEADDR_STREET=" + SCENEADDR_STREET + ", SCENEADDR_CITY=" + SCENEADDR_CITY
 				+ ", SCENEADDR_COUNTY=" + SCENEADDR_COUNTY + ", SCENEADDR_STATE=" + SCENEADDR_STATE + ", SCENEADDR_ZIP="
 				+ SCENEADDR_ZIP + ", SURGERY=" + SURGERY + ", SURGDATE=" + SURGDATE + ", HCPROVIDER=" + HCPROVIDER
-				+ ", CAUTOPSY=" + CAUTOPSY + ", AUTOPUSED=" + AUTOPUSED + "]";
+				+ ", CAUTOPSY=" + CAUTOPSY + ", AUTOPUSED=" + AUTOPUSED + ", success=" + success + "]";
 	}
 }
