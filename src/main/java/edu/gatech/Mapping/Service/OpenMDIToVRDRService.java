@@ -407,6 +407,7 @@ public class OpenMDIToVRDRService {
 			ObservationComponentComponent custodyComp = new ObservationComponentComponent();
 			custodyComp.setCode(new CodeableConcept().addCoding(new Coding("urn:mdi:temporary:code","100002","Death in custody")));
 			custodyComp.setValue(new BooleanType(OpenMDIToVRDRUtil.parseBoolean(inputFields.CUSTODY)));
+			returnIncident.addComponent(custodyComp);
 		}
 		return returnIncident;
 	}
