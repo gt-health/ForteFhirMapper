@@ -3,8 +3,8 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>edu.gatech</groupId>
-  <artifactId>OpenMDIFhirMapping</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <artifactId>ForteFhirMapper</artifactId>
+  <version>0.0.2-SNAPSHOT</version>
   <packaging>war</packaging>
 
   <name>OpenMDIFhirMapping</name>
@@ -33,7 +33,7 @@
     <dependency>
     	<groupId>edu.gatech</groupId>
     	<artifactId>VRDR</artifactId>
-    	<version>v0.1.1-R4</version>
+    	<version>v0.1.5-R4</version>
     </dependency>
     <!-- <dependency>
 		<groupId>org.springframework.boot</groupId>

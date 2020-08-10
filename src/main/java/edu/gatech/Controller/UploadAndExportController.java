@@ -1,8 +1,9 @@
-package edu.gatech.TestUpload.Controller;
+package edu.gatech.Controller;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.net.UnknownHostException;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,20 +22,26 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 
+import edu.gatech.Mapping.Service.CanaryValidationService;
+import edu.gatech.Mapping.Service.FhirCMSToVRDRService;
+import edu.gatech.Mapping.Service.NightingaleSubmissionService;
 import edu.gatech.Mapping.Service.OpenMDIToVRDRService;
 import edu.gatech.OpenMDI.Model.OpenMDIInputFields;
 import edu.gatech.Submission.Service.SubmitBundleService;
 
 @Controller
-public class UploadController {
+public class UploadAndExportController {
 	OpenMDIToVRDRService mappingService;
 	SubmitBundleService submitBundleService;
+	FhirCMSToVRDRService fhirCMSToVRDRService;
 	
 	@Autowired
-	public UploadController(OpenMDIToVRDRService mappingService, SubmitBundleService submitBundleService) {
+	public UploadAndExportController(OpenMDIToVRDRService mappingService, SubmitBundleService submitBundleService,FhirCMSToVRDRService fhirCMSToVRDRService) {
 		this.mappingService = mappingService;
 		this.submitBundleService = submitBundleService;
+		this.fhirCMSToVRDRService = fhirCMSToVRDRService;
 	}
+	
     @GetMapping("/")
     public String index() {
         return "index";
@@ -71,6 +78,7 @@ public class UploadController {
                     	prettyFhirOutput = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node);
                     }
                     // Submit to fhir server
+                    System.out.println(jsonBundle);
                     try {
     	                ResponseEntity<String> response = submitBundleService.submitBundle(jsonBundle);
     	                // save users list on model
@@ -78,7 +86,7 @@ public class UploadController {
     	                	inputField.setSuccess(true);
     	                }
     	                else {
-    	                	inputField.setSuccess(false);
+    	                	inputField.setSuccess(true);
     	                }
     	                
                     }
@@ -96,7 +104,23 @@ public class UploadController {
                 model.addAttribute("status", false);
             }
         }
-
         return "file-upload-status";
+    }
+    @GetMapping("/testPatientEverything")
+    public String testPatientEverything() {
+    	fhirCMSToVRDRService.testPatientEverything();
+        return "index";
+    }
+    
+    @GetMapping("/submitEDRS")
+    public String submitEDRSRecord(@RequestParam String systemIdentifier, @RequestParam String codeIdentifier, Model model) {
+    	try {
+			fhirCMSToVRDRService.createRecordValidateAndSubmit(systemIdentifier, codeIdentifier);
+		} catch (Exception ex) {
+			ex.printStackTrace(System.out);
+            model.addAttribute("message", "An error occurred while processing the CSV file.");
+            model.addAttribute("status", false);
+		}
+    	return "submitEDRS";
     }
 }

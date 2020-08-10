@@ -15,6 +15,7 @@ import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryRequestComponent;
 import org.hl7.fhir.r4.model.Bundle.HTTPVerb;
 import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.Resource;
 
 import edu.gatech.VRDR.model.util.CommonUtil;
@@ -27,6 +28,7 @@ public class OpenMDIToVRDRUtil {
 			"hh:mm:ss", "hh:mm","hhmm","hhmmss");
 	public static String ageRegex = "(\\d+)\\s*(year|month|week|day|hour|minute)";
 	public static String trueValueRegex = "yes|true";
+	public static List<String> nameFormatStrings = Arrays.asList("(.*),\\s{0,1}(.*)\\s(.*)", "(\\w+)\\s(\\w+)");
 	public static String convertUnitOfMeasureStringToCode(String uomString) {
 		switch(uomString) {
 			case "minutes":
@@ -70,6 +72,11 @@ public class OpenMDIToVRDRUtil {
 		date.setHours(timeDate.getHours());
 		date.setMinutes(timeDate.getMinutes());
 		date.setSeconds(timeDate.getSeconds());
+		return date;
+	}
+	public static Date parseDateAndTime(String dateString, String timeString) throws ParseException {
+		Date date = parseDate(dateString);
+		date = addTimeToDate(date, timeString);
 		return date;
 	}
 	public static boolean containsIgnoreCase(String src, String what) {
@@ -169,5 +176,19 @@ public class OpenMDIToVRDRUtil {
 		returnAddress.setState(state);
 		returnAddress.setPostalCode(zip);
 		return returnAddress;
+	}
+	
+	public static HumanName parseHumanName(String name) {
+		for(String nameFormat: nameFormatStrings) {
+			Pattern pattern = Pattern.compile(nameFormat);
+			Matcher matcher = pattern.matcher(name);
+			if(matcher.find()) {
+				HumanName nameResource = new HumanName();
+				nameResource.setFamily(matcher.group(2));
+				nameResource.addGiven(matcher.group(1));
+				return nameResource;
+			}
+		}
+		return null;
 	}
 }

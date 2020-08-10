@@ -34,6 +34,7 @@ import org.hl7.fhir.r4.model.Procedure;
 import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.StringType;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import ca.uhn.fhir.parser.IParser;
@@ -48,7 +49,9 @@ import edu.gatech.VRDR.model.DeathDate;
 import edu.gatech.VRDR.model.DeathLocation;
 import edu.gatech.VRDR.model.Decedent;
 import edu.gatech.VRDR.model.DecedentAge;
-import edu.gatech.VRDR.model.DecedentEmploymentHistory;
+import edu.gatech.VRDR.model.DecedentDispositionMethod;
+import edu.gatech.VRDR.model.DecedentUsualWork;
+import edu.gatech.VRDR.model.DispositionLocation;
 import edu.gatech.VRDR.model.ExaminerContacted;
 import edu.gatech.VRDR.model.InjuryIncident;
 import edu.gatech.VRDR.model.InjuryLocation;
@@ -58,9 +61,12 @@ import edu.gatech.VRDR.model.util.InjuryIncidentUtil;
 @Service
 public class OpenMDIToVRDRService {
 	
+	@Autowired
+	private VRDRFhirContext vrdrFhirContext;
+	
 	public String convertToVRDRString(OpenMDIInputFields inputFields) throws ParseException {
 		Bundle fullBundle = convertToVRDR(inputFields);
-		IParser parser = new VRDRFhirContext().getCtx().newJsonParser();
+		IParser parser = vrdrFhirContext.getCtx().newJsonParser();
 		String returnString = parser.encodeResourceToString(fullBundle);
 		return returnString;
 	}
@@ -92,10 +98,17 @@ public class OpenMDIToVRDRService {
 		}
 		// Handle Employment History
 		Stream<String> employmentHistoryFields = Stream.of(inputFields.JOBTITLE);
-		DecedentEmploymentHistory decedentEmploymentHistory = null;
+		DecedentUsualWork decedentUsualWork = null;
 		if(!employmentHistoryFields.allMatch(x -> x == null || x.isEmpty())) {
-			decedentEmploymentHistory = createDecedentEmploymentHistory(inputFields, decedentReference);
-			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, decedentEmploymentHistory);
+			decedentUsualWork = createDecedentEmploymentHistory(inputFields, decedentReference);
+			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, decedentUsualWork);
+		}
+		// Handle Certifier
+		Stream<String> certifierFields = Stream.of(inputFields.CERTIFIER_NAME,inputFields.CERTIFIER_TYPE);
+		Certifier certifierResource = null;
+		if(!certifierFields.allMatch(x -> x == null || x.isEmpty())) {
+			certifierResource = createCertifier(inputFields);
+			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, certifierResource);
 		}
 		// Handle Cause Of Death Pathway
 		Stream<String> causeOfDeathFields = Stream.of(inputFields.CAUSEA, inputFields.CAUSEB, inputFields.CAUSEC,
@@ -104,6 +117,18 @@ public class OpenMDIToVRDRService {
 		if(!causeOfDeathFields.allMatch(x -> x == null || x.isEmpty())) {
 			CauseOfDeathPathway causeOfDeathPathway = createCauseOfDeathPathway(inputFields, returnBundle, decedentReference, null);
 			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, causeOfDeathPathway);
+		}
+		//  Handle Disposition Method
+		if(inputFields.DISPMETHOD != null && !inputFields.DISPMETHOD.isEmpty()) {
+			DecedentDispositionMethod dispositionMethod = createDispositionMethod(inputFields,decedentReference);
+			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, dispositionMethod);
+		}
+		//  Handle Disposition Location
+		Stream<String> dispositionLocationFields = Stream.of(inputFields.DISP_STREET, inputFields.DISP_CITY, inputFields.DISP_COUNTY,
+				inputFields.DISP_STATE,inputFields.DISP_ZIP);
+		if(!dispositionLocationFields.allMatch(x -> x == null || x.isEmpty())) {
+			DispositionLocation dispositionLocation = createDispositionLocation(inputFields,decedentReference);
+			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, dispositionLocation);
 		}
 		// Handle Injury Location
 		Stream<String> injuryLocFields = Stream.of(inputFields.CINJSTREET,inputFields.CINJCITY,inputFields.CINJCOUNTY
@@ -148,8 +173,9 @@ public class OpenMDIToVRDRService {
 		}
 		// Handle Death Location
 		DeathLocation deathLocation = null;
-		Stream<String> deathLocFields = Stream.of(inputFields.DEATHPLACE, inputFields.EVENTPLACE
-				,inputFields.FOUNDADDR_STREET,inputFields.FOUNDADDR_CITY,inputFields.FOUNDADDR_COUNTY,
+		Stream<String> deathLocFields = Stream.of(inputFields.DEATHPLACE, inputFields.DEATHSTREET,
+				inputFields.DEATHCITY, inputFields.DEATHCOUNTY, inputFields.DEATHSTATE, inputFields.DEATHZIP,
+				inputFields.FOUNDADDR_STREET,inputFields.FOUNDADDR_CITY,inputFields.FOUNDADDR_COUNTY,
 				inputFields.FOUNDADDR_STATE,inputFields.FOUNDADDR_ZIP,inputFields.PRNPLACE,inputFields.PRNSTREET,
 				inputFields.PRNCITY,inputFields.PRNCOUNTY,inputFields.PRNSTATE,inputFields.PRNZIP,
 				inputFields.SCENEADDR_STREET,inputFields.SCENEADDR_CITY,inputFields.SCENEADDR_COUNTY,
@@ -160,7 +186,7 @@ public class OpenMDIToVRDRService {
 		}
 		// Handle Death Date
 		Stream<String> deathDateFields = Stream.of(inputFields.PRNDATE, inputFields.PRNTIME, inputFields.CDEATHFLAG,
-				inputFields.CDEATHDATE);
+				inputFields.CDEATHDATE, inputFields.CDEATHDATE, inputFields.CDEATHTIME);
 		if(!deathDateFields.allMatch(x -> x == null || x.isEmpty())) {
 			DeathDate deathDate = createDeathDate(inputFields, decedentReference, deathLocation);
 			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, deathDate);
@@ -358,19 +384,33 @@ public class OpenMDIToVRDRService {
 		return returnObservation;
 	}
 	
-	private DecedentEmploymentHistory createDecedentEmploymentHistory(OpenMDIInputFields inputFields, Reference decedentReference) {
-		DecedentEmploymentHistory returnEmploymentHistory = new DecedentEmploymentHistory();
+	private DecedentUsualWork createDecedentEmploymentHistory(OpenMDIInputFields inputFields, Reference decedentReference) {
+		DecedentUsualWork returnEmploymentHistory = new DecedentUsualWork();
 		returnEmploymentHistory.setSubject(decedentReference);
 		CodeableConcept usualOccupation = new CodeableConcept();
 		usualOccupation.setText(inputFields.JOBTITLE);
-		returnEmploymentHistory.addUsualOccupation(usualOccupation);
+		returnEmploymentHistory.addUsualIndustry(usualOccupation);
 		return returnEmploymentHistory;
+	}
+	
+	private Certifier createCertifier(OpenMDIInputFields inputFields) {
+		Certifier returnCertifier = new Certifier();
+		if(inputFields.CERTIFIER_NAME != null && !inputFields.CERTIFIER_NAME.isEmpty()) {
+			HumanName certName = OpenMDIToVRDRUtil.parseHumanName(inputFields.CERTIFIER_NAME);
+			returnCertifier.addName(certName);
+		}
+		if(inputFields.CERTIFIER_TYPE != null && !inputFields.CERTIFIER_TYPE.isEmpty()) {
+			//TODO: Add certifier qualification component that makes sense here
+		}
+		return returnCertifier;
 	}
 	
 	private InjuryIncident createInjuryIncident(OpenMDIInputFields inputFields, Reference decedentReference, Location injuryLocation) throws ParseException {
 		InjuryIncident returnIncident = new InjuryIncident();
 		returnIncident.setSubject(decedentReference);
-		returnIncident.addPatientLocationExtension(injuryLocation);
+		if(injuryLocation != null) {
+			returnIncident.addPatientLocationExtension(injuryLocation);
+		}
 		if(inputFields.ATWORK !=  null && !inputFields.ATWORK.isEmpty()) {
 			boolean atWork = OpenMDIToVRDRUtil.parseBoolean(inputFields.ATWORK);
 			returnIncident.addInjuredAtWorkBooleanComponent(OpenMDIToVRDRUtil.parseBooleanAndCreateCode(inputFields.ATWORK));
@@ -484,6 +524,88 @@ public class OpenMDIToVRDRService {
 		return manner;
 	}
 	
+	private DecedentDispositionMethod createDispositionMethod(OpenMDIInputFields inputFields, Reference decedentReferece) {
+		DecedentDispositionMethod returnDispMethod = new DecedentDispositionMethod();
+		if(inputFields.DISPMETHOD != null && !inputFields.DISPMETHOD.isEmpty()) {
+			returnDispMethod.setValue(null, inputFields.DISPMETHOD);
+		}
+		if(decedentReferece != null && !decedentReferece.isEmpty()) {
+			returnDispMethod.setSubject(decedentReferece);
+		}
+		return returnDispMethod;
+	}
+	
+	private DispositionLocation createDispositionLocation(OpenMDIInputFields inputFields, Reference decedentReferece) {
+		DispositionLocation returnDispLocation = new DispositionLocation();
+		Address dispAddr = OpenMDIToVRDRUtil.createAddress(inputFields.DISP_STREET, inputFields.DISP_CITY, inputFields.DISP_COUNTY, inputFields.DISP_STATE, inputFields.DISP_ZIP);
+		returnDispLocation.setAddress(dispAddr);
+		if(inputFields.DISPPLACE!= null && !inputFields.DISPPLACE.isEmpty()) {
+			CodeableConcept physicalTypeCode = new CodeableConcept();
+			Coding physicalTypeCoding = new Coding();
+			physicalTypeCoding.setSystem("http://hl7.org/fhir/ValueSet/location-physical-type");
+			if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.DISPPLACE, "Site")) {
+				physicalTypeCoding.setCode("si");
+				physicalTypeCoding.setDisplay("Site");
+			}
+			else if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.DISPPLACE, "Building")) {
+				physicalTypeCoding.setCode("bu");
+				physicalTypeCoding.setDisplay("Building");
+			}
+			else if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.DISPPLACE, "wing")) {
+				physicalTypeCoding.setCode("wi");
+				physicalTypeCoding.setDisplay("Wing");
+			}
+			else if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.DISPPLACE, "ward")) {
+				physicalTypeCoding.setCode("wa");
+				physicalTypeCoding.setDisplay("Ward");
+			}
+			else if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.DISPPLACE, "level")) {
+				physicalTypeCoding.setCode("lvl");
+				physicalTypeCoding.setDisplay("Level");
+			}
+			else if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.DISPPLACE, "corridor")) {
+				physicalTypeCoding.setCode("co");
+				physicalTypeCoding.setDisplay("Corridor");
+			}
+			else if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.DISPPLACE, "room")) {
+				physicalTypeCoding.setCode("ro");
+				physicalTypeCoding.setDisplay("Room");
+			}
+			else if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.DISPPLACE, "bed")) {
+				physicalTypeCoding.setCode("bd");
+				physicalTypeCoding.setDisplay("Bed");
+			}
+			else if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.DISPPLACE, "vechicle")) {
+				physicalTypeCoding.setCode("ve");
+				physicalTypeCoding.setDisplay("Vechicle");
+			}
+			else if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.DISPPLACE, "house")) {
+				physicalTypeCoding.setCode("ho");
+				physicalTypeCoding.setDisplay("House");
+			}
+			else if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.DISPPLACE, "cabinet")) {
+				physicalTypeCoding.setCode("ca");
+				physicalTypeCoding.setDisplay("Cabinet");
+			}
+			else if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.DISPPLACE, "Road")) {
+				physicalTypeCoding.setCode("rd");
+				physicalTypeCoding.setDisplay("road");
+			}
+			else if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.DISPPLACE, "Jurisdiction")) {
+				physicalTypeCoding.setCode("jdn");
+				physicalTypeCoding.setDisplay("Jurisidiction");
+			}
+			else {
+				physicalTypeCoding.setCode("area");
+				physicalTypeCoding.setDisplay("area");
+			}
+			
+			physicalTypeCode.addCoding(physicalTypeCoding);
+			returnDispLocation.setPhysicalType(physicalTypeCode);
+		}
+		return returnDispLocation;
+	}
+	
 	private DocumentReference createCaseNote(String caseNoteString, Reference decedentReference) {
 		DocumentReference caseNote = new DocumentReference();
 		caseNote.setType(new CodeableConcept().
@@ -536,8 +658,19 @@ public class OpenMDIToVRDRService {
 	private DeathDate createDeathDate(OpenMDIInputFields inputFields, Reference decedentReference, Location location) throws ParseException {
 		DeathDate returnDeathDate = new DeathDate();
 		returnDeathDate.setSubject(decedentReference);
-		returnDeathDate.addPatientLocationExtension(location);
-		//TODO: Add loction reference
+		if(location != null && !location.isEmpty()) {
+			returnDeathDate.addPatientLocationExtension(location);
+		}
+		if(location != null && !location.isEmpty()) {
+			returnDeathDate.addPatientLocationExtension(location);
+		}
+		if(inputFields.CDEATHDATE != null && !inputFields.CDEATHDATE.isEmpty()) {
+			Date certDate = OpenMDIToVRDRUtil.parseDate(inputFields.CDEATHDATE);
+			if(inputFields.CDEATHTIME != null && !inputFields.CDEATHTIME.isEmpty()) {
+				OpenMDIToVRDRUtil.addTimeToDate(certDate, inputFields.CDEATHTIME);
+			}
+			returnDeathDate.setEffective(new DateTimeType(certDate));
+		}
 		if(inputFields.PRNDATE != null && !inputFields.PRNDATE.isEmpty()) {
 			Date prnDate = OpenMDIToVRDRUtil.parseDate(inputFields.PRNDATE);
 			if(inputFields.PRNTIME != null && !inputFields.PRNTIME.isEmpty()) {
@@ -625,6 +758,13 @@ public class OpenMDIToVRDRService {
 			deathPlace.setValue(new StringType(inputFields.DEATHPLACE));
 			returnDeathLocation.addExtension(deathPlace);
 		}
+		Stream<String> deathAddrFields = Stream.of(inputFields.DEATHSTREET, inputFields.DEATHCITY,
+				inputFields.DEATHCOUNTY, inputFields.DEATHSTATE, inputFields.DEATHZIP);
+		if(!deathAddrFields.allMatch(x -> x == null || x.isEmpty())) {
+			Address deathAddr = OpenMDIToVRDRUtil.createAddress(inputFields.DEATHSTREET, inputFields.DEATHCITY,
+					inputFields.DEATHCOUNTY, inputFields.DEATHSTATE, inputFields.DEATHZIP);
+			returnDeathLocation.setAddress(deathAddr);
+		}
 		if(inputFields.EVENTPLACE != null && !inputFields.EVENTPLACE.isEmpty()) {
 			CodeableConcept physicalTypeCode = new CodeableConcept();
 			Coding physicalTypeCoding = new Coding();
@@ -705,8 +845,8 @@ public class OpenMDIToVRDRService {
 		sceneExt.setUrl("urn:mdi:temporary:code:scene-address");
 		Address sceneAddr = OpenMDIToVRDRUtil.createAddress(inputFields.SCENEADDR_STREET, inputFields.SCENEADDR_CITY,
 				inputFields.SCENEADDR_COUNTY, inputFields.SCENEADDR_STATE, inputFields.SCENEADDR_ZIP);
-		prnExt.setValue(pronouncedDeadAddr);
-		returnDeathLocation.addExtension(prnExt);
+		sceneExt.setValue(sceneAddr);
+		returnDeathLocation.addExtension(sceneExt);
 		return returnDeathLocation;
 	}
 	
@@ -730,7 +870,7 @@ public class OpenMDIToVRDRService {
 		
 		if(inputFields.SURGDATE != null && !inputFields.SURGDATE.isEmpty()) {
 			Date reportDate = OpenMDIToVRDRUtil.parseDate(inputFields.SURGDATE);
-			returnProcedure.setPerformed(new DateType(reportDate));
+			returnProcedure.setPerformed(new DateTimeType(reportDate));
 		}
 		return returnProcedure;
 	}
