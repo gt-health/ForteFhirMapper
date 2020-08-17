@@ -11,7 +11,7 @@ steps:
 - name: deploy_helmcharts_image_fortefhirserver
   image: plugins/docker
   settings:
-    repo: gt-build.hdap.gatech.edu/forte-fhir-server
+    repo: gt-build.hdap.gatech.edu/forte-fhir-mappeer
     context: .
     dockerfile: ./Dockerfile
 #    tags:
