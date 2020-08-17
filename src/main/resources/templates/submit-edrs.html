@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>MDI CMS Import To Fhir</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"/>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+  <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<div class="container py-5">
+    <div class="row">
+        <div class="col-10 mx-auto">
+            <h1>Submission status</h1>
+            <!--display error if any-->
+            <div class="alert alert-danger" role="alert" th:if="${!status}">
+                <strong>Error:</strong>
+                <span th:text="${message}"></span>
+            </div>
+
+            <!--display users list-->
+            <table class="table table-striped" th:if="${status}">
+                <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">CASENUMBER</th>
+                    <th scope="col">FIRSTNAME</th>
+                    <th scope="col">LASTNAME</th>
+                    <th scope="col">Date Prn Dead</th>
+                    <th scope="col">AGE</th>
+                    <th scope="col">Submission Received?</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="case, i : ${inputFields}">
+                    <th scope="row" th:text="${i.index + 1}"></th>
+                    <td th:text="${case.CASEID}"></td>
+                    <td th:text="${case.FIRSTNAME}"></td>
+                    <td th:text="${case.LASTNAME}"></td>
+                    <td th:text="${case.PRNDATE}"></td>
+                    <td th:text="${case.AGE}"></td>
+                    <td th:if=${case.success}><span class="glyphicon glyphicon-ok"></span></td>
+                    <td th:unless=${case.success}><span class="glyphicon glyphicon-remove"></span></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

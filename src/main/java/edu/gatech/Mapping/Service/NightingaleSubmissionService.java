@@ -14,9 +14,8 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 public class NightingaleSubmissionService {
 
-	@Autowired
 	private RestTemplate restTemplate;
-	@Value("${nightingale.service.endpoint}")
+	@Value("${nightingale.url}")
 	private String nightingaleURL;
 	
 	public NightingaleSubmissionService() {

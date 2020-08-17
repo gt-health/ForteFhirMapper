@@ -42,12 +42,12 @@ public class UploadAndExportController {
 		this.fhirCMSToVRDRService = fhirCMSToVRDRService;
 	}
 	
-    @GetMapping("/")
+    @GetMapping("/forte-fhir-client")
     public String index() {
         return "index";
     }
 
-    @PostMapping("/upload-csv-file")
+    @PostMapping("/forte-fhir-client/upload-csv-file")
     public String uploadCSVFile(@RequestParam("file") MultipartFile file, Model model) {
 
         // validate file
@@ -106,21 +106,21 @@ public class UploadAndExportController {
         }
         return "file-upload-status";
     }
-    @GetMapping("/testPatientEverything")
+    @GetMapping("/forte-fhir-client/testPatientEverything")
     public String testPatientEverything() {
     	fhirCMSToVRDRService.testPatientEverything();
         return "index";
     }
     
-    @GetMapping("/submitEDRS")
+    @GetMapping("/forte-fhir-client/submitEDRS")
     public String submitEDRSRecord(@RequestParam String systemIdentifier, @RequestParam String codeIdentifier, Model model) {
     	try {
 			fhirCMSToVRDRService.createRecordValidateAndSubmit(systemIdentifier, codeIdentifier);
 		} catch (Exception ex) {
 			ex.printStackTrace(System.out);
-            model.addAttribute("message", "An error occurred while processing the CSV file.");
+            model.addAttribute("message", ex.getMessage());
             model.addAttribute("status", false);
 		}
-    	return "submitEDRS";
+    	return "submit-edrs";
     }
 }

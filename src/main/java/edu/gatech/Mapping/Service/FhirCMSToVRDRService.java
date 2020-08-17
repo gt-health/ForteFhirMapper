@@ -92,12 +92,6 @@ import edu.gatech.VRDR.model.util.TobaccoUseContributedToDeathUtil;
 @Service
 public class FhirCMSToVRDRService {
 
-	@Value("${fhircms.url}")
-	private String url;
-	@Value("${fhircms.basicAuth.username}")
-	private String basicUsername;
-	@Value("${fhircms.basicAuth.password}")
-	private String basicPassword;
 	@Autowired
 	private VRDRFhirContext vrdrFhirContext;
 	@Autowired
@@ -107,7 +101,9 @@ public class FhirCMSToVRDRService {
 	private IGenericClient client;
 	private IParser parser;
 	@Autowired
-	public FhirCMSToVRDRService(VRDRFhirContext vrdrFhirContext) {
+	public FhirCMSToVRDRService(VRDRFhirContext vrdrFhirContext, @Value("${fhircms.url}") String url,
+	@Value("${fhircms.basicAuth.username}") String basicUsername,
+	@Value("${fhircms.basicAuth.password}") String basicPassword) {
 		this.vrdrFhirContext = vrdrFhirContext;
 		client = vrdrFhirContext.getCtx().newRestfulGenericClient(url);
 		IClientInterceptor authInterceptor = new BasicAuthInterceptor(basicUsername, basicPassword);
@@ -153,7 +149,6 @@ public class FhirCMSToVRDRService {
 	
 	public DeathCertificateDocument createDCDFromBaseFhirServer(String patientIdentifierSystem, String patientIdentifierCode) throws Exception {
 		DeathCertificateDocument deathCertificateDocument = new DeathCertificateDocument();
-		IGenericClient client = generateClient();
 		//Find the specific patient in the server with it's identifier
 		Bundle patientBundle = client.search()
 				.forResource(Patient.class)
@@ -161,7 +156,7 @@ public class FhirCMSToVRDRService {
 				.returnBundle(Bundle.class)
 				.execute();
 		Patient patient = null;
-		if(!patientBundle.isEmpty()) {
+		if(patientBundle.getEntryFirstRep().getResource() != null) {
 			patient = (Patient)patientBundle.getEntryFirstRep().getResource();
 		}
 		else {
@@ -242,8 +237,6 @@ public class FhirCMSToVRDRService {
 					break;
 				default:
 					break;
-					
-						
 				}
 			}
 		}
@@ -252,10 +245,6 @@ public class FhirCMSToVRDRService {
 		//TODO: Submit VRDR back to FHIR server via $transaction operation
 		//TODO: 
 		return new DeathCertificateDocument();
-	}
-	
-	public void getCanaryValidation() {
-		
 	}
 	
 	public void addConditionToDeathCertificate(Condition condition, DeathCertificate deathCertificate, DeathCertificateDocument dcd) {
@@ -436,21 +425,6 @@ public class FhirCMSToVRDRService {
 			CommonUtil.addSectionEntry(deathCertificate, profiledRelatedPerson);
 			CommonUtil.addBundleEntry(dcd, profiledRelatedPerson);
 		}
-	}
-	
-	private IGenericClient generateClient() {
-		IGenericClient client = vrdrFhirContext.getCtx().newRestfulGenericClient(url);
-		IClientInterceptor authInterceptor = new BasicAuthInterceptor(basicUsername, basicPassword);
-		client.registerInterceptor(authInterceptor);
-		// Create a logging interceptor
-		LoggingInterceptor loggingInterceptor = new LoggingInterceptor();
-
-		// Optionally you may configure the interceptor (by default only
-		// summary info is logged)
-		loggingInterceptor.setLogRequestSummary(true);
-		loggingInterceptor.setLogRequestBody(true);
-		client.registerInterceptor(loggingInterceptor);
-		return client;
 	}
 	
 	private Decedent findDecedentInDCD(DeathCertificateDocument dcd) {

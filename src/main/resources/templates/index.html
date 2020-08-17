@@ -10,7 +10,7 @@
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
 </head>
 
-<form method="POST" th:action="@{/upload-csv-file}" enctype="multipart/form-data">
+<form method="POST" th:action="@{/forte-fhir-client/upload-csv-file}" enctype="multipart/form-data">
     <div class="form-group mt-3">
         <label for="file">Select a CSV file</label>
         <input type="file" name="file" class="form-control-file" id="file" accept=".csv">

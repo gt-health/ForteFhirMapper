@@ -5,6 +5,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.annotation.Bean;
 
+import edu.gatech.Mapping.Service.CanaryValidationService;
+import edu.gatech.Mapping.Service.NightingaleSubmissionService;
 import edu.gatech.VRDR.context.VRDRFhirContext;
 
 @SpringBootApplication
@@ -18,4 +20,10 @@ public class Application extends SpringBootServletInitializer{
     public VRDRFhirContext vrdrFhirContext() {
     	return new VRDRFhirContext();
     }
+    
+    @Bean
+    public NightingaleSubmissionService nightingaleSubmissionService() {
+    	return new NightingaleSubmissionService();
+    }
+    
 }

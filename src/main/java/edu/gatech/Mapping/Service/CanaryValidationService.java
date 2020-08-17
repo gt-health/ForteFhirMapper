@@ -19,7 +19,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 public class CanaryValidationService {
 	
 	private RestTemplate restTemplate;
-	@Value("${canary.service.endpoint}")
+	@Value("${canary.url}")
 	private String canaryURL;
 	
 	public CanaryValidationService() {
