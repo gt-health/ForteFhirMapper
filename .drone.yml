@@ -8,10 +8,10 @@ steps:
   commands:
     - git submodule update --init --recursive --remote
 # Create Docker image from WAR file and push to HDAP Docker registry
-- name: deploy_helmcharts_image_fortefhirserver
+- name: create_docker_image_forte-fhir-mapper
   image: plugins/docker
   settings:
-    repo: gt-build.hdap.gatech.edu/forte-fhir-mappeer
+    repo: gt-build.hdap.gatech.edu/forte-fhir-mapper
     context: .
     dockerfile: ./Dockerfile
 #    tags:
