@@ -6,7 +6,7 @@ global:
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 # REMOVE THIS SECTION IF YOUR APPLICATION DOES NOT HAVE A FRONT END
-frontend1:
+frontend2:
   #name is a DNS-1035 label and must consist of lower case alphanumeric characters or '-', start with an alphabetic character, and end with an alphanumeric character (e.g. 'my-name',  or 'abc-123')
   name: forte-fhir-mapper
   port: 8080
