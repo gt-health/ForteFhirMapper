@@ -65,6 +65,5 @@ public class SubmitBundleService {
 	public void setBasicPassword(String basicPassword) {
 		this.basicPassword = basicPassword;
 	}
-	
-	
+		
 }

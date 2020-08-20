@@ -42,12 +42,12 @@ public class UploadAndExportController {
 		this.fhirCMSToVRDRService = fhirCMSToVRDRService;
 	}
 	
-    @GetMapping("/forte-fhir-client")
+    @GetMapping("/")
     public String index() {
         return "index";
     }
 
-    @PostMapping("/forte-fhir-client/upload-csv-file")
+    @PostMapping("upload-csv-file")
     public String uploadCSVFile(@RequestParam("file") MultipartFile file, Model model) {
 
         // validate file
@@ -86,9 +86,8 @@ public class UploadAndExportController {
     	                	inputField.setSuccess(true);
     	                }
     	                else {
-    	                	inputField.setSuccess(true);
-    	                }
-    	                
+    	                	inputField.setSuccess(false);
+    	                }   
                     }
                     catch (HttpStatusCodeException e) {
                     	inputField.setSuccess(false);
@@ -106,13 +105,13 @@ public class UploadAndExportController {
         }
         return "file-upload-status";
     }
-    @GetMapping("/forte-fhir-client/testPatientEverything")
+    @GetMapping("testPatientEverything")
     public String testPatientEverything() {
     	fhirCMSToVRDRService.testPatientEverything();
         return "index";
     }
     
-    @GetMapping("/forte-fhir-client/submitEDRS")
+    @GetMapping("submitEDRS")
     public String submitEDRSRecord(@RequestParam String systemIdentifier, @RequestParam String codeIdentifier, Model model) {
     	try {
 			fhirCMSToVRDRService.createRecordValidateAndSubmit(systemIdentifier, codeIdentifier);

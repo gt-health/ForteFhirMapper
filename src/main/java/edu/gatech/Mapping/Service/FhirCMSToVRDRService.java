@@ -123,6 +123,8 @@ public class FhirCMSToVRDRService {
 		ObjectNode returnNode = JsonNodeFactory.instance.objectNode();
 		DeathCertificateDocument dcd = createDCDFromBaseFhirServer(patientIdentifierSystem, patientIdentifierCode);
 		String VRDRJson = parser.encodeResourceToString(dcd);
+		System.out.println("VRDR Submission Document:");
+		System.out.println(VRDRJson);
 		JsonNode canaryIssues = canaryValidationService.validateVRDRAgainstCanary(VRDRJson);
 		returnNode.set("validationIssues",canaryIssues);
 		JsonNode nightingaleResponse = nightingaleSubmissionService.submitRecord(VRDRJson);
@@ -165,7 +167,7 @@ public class FhirCMSToVRDRService {
 		//Find the Death Certificate Composition in the system if it allready exists
 		Bundle compositionBundle = client.search()
 		.forResource(Composition.class)
-		.where(Composition.PATIENT.hasId(patientIdentifierCode))
+		.where(Composition.PATIENT.hasId(patient.getIdElement().getIdPart()))
 		.returnBundle(Bundle.class)
 		.execute();
 		DeathCertificate deathCertificate = new DeathCertificate();
