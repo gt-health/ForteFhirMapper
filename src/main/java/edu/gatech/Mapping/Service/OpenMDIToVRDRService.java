@@ -97,7 +97,7 @@ public class OpenMDIToVRDRService {
 			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, decedentAge);
 		}
 		// Handle Employment History
-		Stream<String> employmentHistoryFields = Stream.of(inputFields.JOBTITLE);
+		Stream<String> employmentHistoryFields = Stream.of(inputFields.JOBTITLE, inputFields.INDUSTRY);
 		DecedentUsualWork decedentUsualWork = null;
 		if(!employmentHistoryFields.allMatch(x -> x == null || x.isEmpty())) {
 			decedentUsualWork = createDecedentEmploymentHistory(inputFields, decedentReference);
@@ -212,7 +212,7 @@ public class OpenMDIToVRDRService {
 		// Handle Hospital DateTime
 		Stream<String> hospDTFields = Stream.of(inputFields.ATHOSPDATE, inputFields.ATHOSPTIME);
 		if(!hospDTFields.allMatch(x -> x == null || x.isEmpty())) {
-			Observation caseYear = createCaseYearObs(inputFields, decedentReference);
+			Observation caseYear = createHospitalDateTime(inputFields, decedentReference);
 			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, caseYear);
 		}
 		// Handle Surgery
@@ -249,27 +249,27 @@ public class OpenMDIToVRDRService {
 		}
 		if(inputFields.RACE != null && !inputFields.RACE.isEmpty()) {
 			if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.RACE, "White")) {
-				returnDecedent.setRace("2106-3", "", "White");
+				returnDecedent.setRace("2106-3", "", inputFields.RACE);
 			}
 			else if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.RACE, "Hawaiian") || OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.RACE, "Pacific")) {
-				returnDecedent.setRace("2076-8", "", "Native Hawaiian or Other Pacific Islander");
+				returnDecedent.setRace("2076-8", "", inputFields.RACE);
 			}
 			else if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.RACE, "Asian")) {
-				returnDecedent.setRace("2028-9", "", "Asian");
+				returnDecedent.setRace("2028-9", "", inputFields.RACE);
 			}
 			else if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.RACE, "Indian") || OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.RACE, "Native")) {
-				returnDecedent.setRace("1002-5", "", "American Indian or Alaska Native");
+				returnDecedent.setRace("1002-5", "", inputFields.RACE);
 			}
 			else if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.RACE, "Black")) {
-				returnDecedent.setRace("2054-5", "", "Black");
+				returnDecedent.setRace("2054-5", "", inputFields.RACE);
 			}
 		}
 		if(inputFields.ETHNICITY != null && !inputFields.ETHNICITY.isEmpty()) {
-			if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.ETHNICITY, "Not Hispanic")) {
-				returnDecedent.setEthnicity("2186-5", "", "Not Hispanic or Latino");
+			if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.ETHNICITY, "Not Hispanic") || OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.ETHNICITY, "Malaysian")) {
+				returnDecedent.setEthnicity("2186-5", "", inputFields.ETHNICITY);
 			}
-			else if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.ETHNICITY, "Hispanic") || OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.ETHNICITY, "Cuban") || OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.ETHNICITY, "Latino")) {
-				returnDecedent.setEthnicity("2135-2", "", "Hispanic or Latino");
+			else if(OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.ETHNICITY, "Hispanic") || OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.ETHNICITY, "Cuban") || OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.ETHNICITY, "Salvadoran") ||OpenMDIToVRDRUtil.containsIgnoreCase(inputFields.ETHNICITY, "Latino")) {
+				returnDecedent.setEthnicity("2135-2", "", inputFields.ETHNICITY);
 			}
 		}
 		if(inputFields.GENDER != null && !inputFields.GENDER.isEmpty()) {
@@ -387,9 +387,16 @@ public class OpenMDIToVRDRService {
 	private DecedentUsualWork createDecedentEmploymentHistory(OpenMDIInputFields inputFields, Reference decedentReference) {
 		DecedentUsualWork returnEmploymentHistory = new DecedentUsualWork();
 		returnEmploymentHistory.setSubject(decedentReference);
-		CodeableConcept usualOccupation = new CodeableConcept();
-		usualOccupation.setText(inputFields.JOBTITLE);
-		returnEmploymentHistory.addUsualIndustry(usualOccupation);
+		if(inputFields.JOBTITLE != null && !inputFields.JOBTITLE.isEmpty()) {
+			CodeableConcept usualOccupation = new CodeableConcept();
+			usualOccupation.setText(inputFields.JOBTITLE);
+			returnEmploymentHistory.setValue(usualOccupation);
+		}
+		if(inputFields.INDUSTRY != null && !inputFields.INDUSTRY.isEmpty()) {
+			CodeableConcept usualIndustry = new CodeableConcept();
+			usualIndustry.setText(inputFields.INDUSTRY);
+			returnEmploymentHistory.addUsualIndustry(usualIndustry);
+		}
 		return returnEmploymentHistory;
 	}
 	
@@ -661,9 +668,6 @@ public class OpenMDIToVRDRService {
 		if(location != null && !location.isEmpty()) {
 			returnDeathDate.addPatientLocationExtension(location);
 		}
-		if(location != null && !location.isEmpty()) {
-			returnDeathDate.addPatientLocationExtension(location);
-		}
 		if(inputFields.CDEATHDATE != null && !inputFields.CDEATHDATE.isEmpty()) {
 			Date certDate = OpenMDIToVRDRUtil.parseDate(inputFields.CDEATHDATE);
 			if(inputFields.CDEATHTIME != null && !inputFields.CDEATHTIME.isEmpty()) {
@@ -727,7 +731,7 @@ public class OpenMDIToVRDRService {
 		returnObs.setSubject(decedentReference);
 		returnObs.setCode(new CodeableConcept().addCoding(new Coding(
 				"urn:mdi:temporary:code", "1000005", "Year by which case is categorized")));
-		if(inputFields.EXAMDATE != null && !inputFields.EXAMDATE.isEmpty()) {
+		if(inputFields.CASEYEAR != null && !inputFields.CASEYEAR.isEmpty()) {
 			Date reportDate = OpenMDIToVRDRUtil.parseDate(inputFields.CASEYEAR);
 			returnObs.setValue(new DateTimeType(reportDate));
 		}
