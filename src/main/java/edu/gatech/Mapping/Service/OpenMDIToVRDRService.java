@@ -17,6 +17,8 @@ import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleType;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Composition.CompositionAttestationMode;
+import org.hl7.fhir.r4.model.Composition.CompositionAttesterComponent;
 import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.DocumentReference;
@@ -45,6 +47,7 @@ import edu.gatech.VRDR.model.AutopsyPerformedIndicator;
 import edu.gatech.VRDR.model.CauseOfDeathCondition;
 import edu.gatech.VRDR.model.CauseOfDeathPathway;
 import edu.gatech.VRDR.model.Certifier;
+import edu.gatech.VRDR.model.DeathCertificate;
 import edu.gatech.VRDR.model.DeathDate;
 import edu.gatech.VRDR.model.DeathLocation;
 import edu.gatech.VRDR.model.Decedent;
@@ -227,6 +230,17 @@ public class OpenMDIToVRDRService {
 			AutopsyPerformedIndicator autopsy = createAutopsy(inputFields, decedentReference);
 			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, autopsy);
 		}
+		//Create Death Certificate to house the certifier and decedent reference
+		DeathCertificate deathCertificate = new DeathCertificate();
+		if(certifierResource != null) {
+			CompositionAttesterComponent cac = new CompositionAttesterComponent();
+			cac.setMode(CompositionAttestationMode.LEGAL);
+			cac.setTime(new Date());
+			cac.setParty(new Reference(certifierResource));
+			deathCertificate.addAttester(cac);
+		}
+		deathCertificate.setSubject(decedentReference);
+		OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, deathCertificate);
 		return returnBundle;
 	}
 	

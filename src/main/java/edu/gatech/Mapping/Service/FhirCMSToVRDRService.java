@@ -172,11 +172,9 @@ public class FhirCMSToVRDRService {
 		.execute();
 		DeathCertificate deathCertificate = new DeathCertificate();
 		if(compositionBundle.hasEntry()) {
-			for(BundleEntryComponent bec:compositionBundle.getEntry()) {
-				Composition currentComposition = (Composition)bec.getResource();
-				if(FHIRCMSToVRDRUtil.codeableConceptsEqual(DeathCertificateUtil.typeFixedValue,currentComposition.getType())){
-					deathCertificate = (DeathCertificate)currentComposition;
-				}
+			Composition currentComposition = (Composition)compositionBundle.getEntryFirstRep().getResource();
+			if(FHIRCMSToVRDRUtil.codeableConceptsEqual(DeathCertificateUtil.typeFixedValue,currentComposition.getType())){
+				deathCertificate = (DeathCertificate)currentComposition;
 			}
 		}
 		deathCertificateDocument.addEntry(new BundleEntryComponent().setResource(deathCertificate));
