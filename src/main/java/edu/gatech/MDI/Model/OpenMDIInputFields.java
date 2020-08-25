@@ -1,4 +1,4 @@
-package edu.gatech.OpenMDI.Model;
+package edu.gatech.MDI.Model;
 
 import com.opencsv.bean.CsvBindByName;
 

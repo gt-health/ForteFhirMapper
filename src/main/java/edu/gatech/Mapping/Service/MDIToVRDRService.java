@@ -40,8 +40,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import ca.uhn.fhir.parser.IParser;
+import edu.gatech.MDI.Model.OpenMDIInputFields;
 import edu.gatech.Mapping.Util.OpenMDIToVRDRUtil;
-import edu.gatech.OpenMDI.Model.OpenMDIInputFields;
 import edu.gatech.VRDR.context.VRDRFhirContext;
 import edu.gatech.VRDR.model.AutopsyPerformedIndicator;
 import edu.gatech.VRDR.model.CauseOfDeathCondition;
@@ -62,7 +62,7 @@ import edu.gatech.VRDR.model.MannerOfDeath;
 import edu.gatech.VRDR.model.util.InjuryIncidentUtil;
 
 @Service
-public class OpenMDIToVRDRService {
+public class MDIToVRDRService {
 	
 	@Autowired
 	private VRDRFhirContext vrdrFhirContext;
@@ -118,7 +118,7 @@ public class OpenMDIToVRDRService {
 				inputFields.CAUSED,inputFields.OSCOND, inputFields.DURATIONA, inputFields.DURATIONB,
 				inputFields.DURATIONC, inputFields.DURATIOND);
 		if(!causeOfDeathFields.allMatch(x -> x == null || x.isEmpty())) {
-			CauseOfDeathPathway causeOfDeathPathway = createCauseOfDeathPathway(inputFields, returnBundle, decedentReference, null);
+			CauseOfDeathPathway causeOfDeathPathway = createCauseOfDeathPathway(inputFields, returnBundle, decedentReference, certifierResource);
 			OpenMDIToVRDRUtil.addResourceToBundle(returnBundle, causeOfDeathPathway);
 		}
 		//  Handle Disposition Method
@@ -236,7 +236,7 @@ public class OpenMDIToVRDRService {
 			CompositionAttesterComponent cac = new CompositionAttesterComponent();
 			cac.setMode(CompositionAttestationMode.LEGAL);
 			cac.setTime(new Date());
-			cac.setParty(new Reference(certifierResource));
+			cac.setParty(new Reference(certifierResource.getId()));
 			deathCertificate.addAttester(cac);
 		}
 		deathCertificate.setSubject(decedentReference);

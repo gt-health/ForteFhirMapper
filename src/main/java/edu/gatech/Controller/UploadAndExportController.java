@@ -19,24 +19,26 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 
+import edu.gatech.MDI.Model.OpenMDIInputFields;
 import edu.gatech.Mapping.Service.CanaryValidationService;
 import edu.gatech.Mapping.Service.FhirCMSToVRDRService;
 import edu.gatech.Mapping.Service.NightingaleSubmissionService;
-import edu.gatech.Mapping.Service.OpenMDIToVRDRService;
-import edu.gatech.OpenMDI.Model.OpenMDIInputFields;
+import edu.gatech.Mapping.Service.MDIToVRDRService;
 import edu.gatech.Submission.Service.SubmitBundleService;
 
 @Controller
 public class UploadAndExportController {
-	OpenMDIToVRDRService mappingService;
+	MDIToVRDRService mappingService;
 	SubmitBundleService submitBundleService;
 	FhirCMSToVRDRService fhirCMSToVRDRService;
 	
 	@Autowired
-	public UploadAndExportController(OpenMDIToVRDRService mappingService, SubmitBundleService submitBundleService,FhirCMSToVRDRService fhirCMSToVRDRService) {
+	public UploadAndExportController(MDIToVRDRService mappingService, SubmitBundleService submitBundleService,FhirCMSToVRDRService fhirCMSToVRDRService) {
 		this.mappingService = mappingService;
 		this.submitBundleService = submitBundleService;
 		this.fhirCMSToVRDRService = fhirCMSToVRDRService;
@@ -112,14 +114,20 @@ public class UploadAndExportController {
     }
     
     @GetMapping("submitEDRS")
-    public String submitEDRSRecord(@RequestParam String systemIdentifier, @RequestParam String codeIdentifier, Model model) {
+    public ResponseEntity<JsonNode> submitEDRSRecord(@RequestParam String systemIdentifier, @RequestParam String codeIdentifier,
+    		@RequestParam(defaultValue = "false") boolean validateOnly, @RequestParam(defaultValue = "false") boolean createOnly,
+    		@RequestParam(defaultValue = "false") boolean submitOnly) {
+    	JsonNode returnNode = JsonNodeFactory.instance.objectNode();
     	try {
-			fhirCMSToVRDRService.createRecordValidateAndSubmit(systemIdentifier, codeIdentifier);
+			returnNode = fhirCMSToVRDRService.createRecordValidateAndSubmit(systemIdentifier, codeIdentifier, createOnly, validateOnly, submitOnly);
 		} catch (Exception ex) {
 			ex.printStackTrace(System.out);
-            model.addAttribute("message", ex.getMessage());
-            model.addAttribute("status", false);
+            ObjectNode exceptionNode = JsonNodeFactory.instance.objectNode();
+            exceptionNode.put("Exception", ex.getMessage());
+            ResponseEntity<JsonNode> response = new ResponseEntity<JsonNode>(exceptionNode, HttpStatus.INTERNAL_SERVER_ERROR);
+            return response;
 		}
-    	return "submit-edrs";
+    	ResponseEntity<JsonNode> response = new ResponseEntity<JsonNode>(returnNode, HttpStatus.OK);
+    	return response;
     }
 }
