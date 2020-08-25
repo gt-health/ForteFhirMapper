@@ -1,5 +1,6 @@
 package edu.gatech.Mapping.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -7,6 +8,8 @@ import java.util.regex.Pattern;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Composition;
+import org.hl7.fhir.r4.model.Composition.CompositionAttestationMode;
+import org.hl7.fhir.r4.model.Composition.CompositionAttesterComponent;
 import org.hl7.fhir.r4.model.Composition.SectionComponent;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.DocumentReference;
@@ -397,9 +400,23 @@ public class FhirCMSToVRDRService {
 		if(practitioner instanceof Certifier){
 			Certifier profiledPrac = (Certifier)practitioner;
 			addReferenceToDeathCertificate(deathCertificate, profiledPrac);
-			if(!deathCertificate.hasAttester()) {
-				deathCertificate.addAttester(profiledPrac, new Date());
+			//Hack around to update the reference from "Prac/123" to "123"
+			CompositionAttesterComponent oldcac = null;
+			if(deathCertificate.hasAttester()) {
+				oldcac = deathCertificate.getAttesterFirstRep();
+				deathCertificate.setAttester(new ArrayList());
 			}
+			CompositionAttesterComponent newcac = new CompositionAttesterComponent();
+			newcac.setMode(CompositionAttestationMode.LEGAL);
+			if(oldcac != null && oldcac.getTime() != null) {
+				newcac.setTime(oldcac.getTime());
+			}
+			else {
+				newcac.setTime(new Date());
+			}
+			Reference certifierReference = new Reference(profiledPrac.getIdElement().getIdPart());
+			newcac.setParty(certifierReference);
+			deathCertificate.addAttester(newcac);
 			CommonUtil.addBundleEntry(dcd, profiledPrac);
 		}
 		else if(practitioner instanceof DeathPronouncementPerformer){
