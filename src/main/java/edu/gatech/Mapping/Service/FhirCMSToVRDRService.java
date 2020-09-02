@@ -26,6 +26,7 @@ import org.hl7.fhir.r4.model.Procedure;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.RelatedPerson;
 import org.hl7.fhir.r4.model.Resource;
+import org.hl7.fhir.r4.model.ResourceType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -144,27 +145,29 @@ public class FhirCMSToVRDRService {
 			return returnNode;
 		}
 		JsonNode nightingaleResponse = nightingaleSubmissionService.submitRecord(VRDRJson);
-		//Pattern pattern = Pattern.compile(".*(\\d+).*");
+		Pattern pattern = Pattern.compile("CreatedID:(\\d+)");
 		String inputString = nightingaleResponse.get("message").asText().replaceAll(" ", "");
 		returnNode.put("Nightingale Response", nightingaleResponse.get("message").asText());
-		//Matcher matcher = pattern.matcher(inputString);
-		//String nightingaleId = matcher.group(1);
-		//Decedent decedent = findDecedentInDCD(dcd);
-		//decedent.addIdentifier(new Identifier().setSystem(nightingaleSubmissionService.getNightingaleURL()).setValue(nightingaleId));
-		//TODO: Update the composition as well
-		//returnNode.put("VRDR",parser.encodeResourceToString(dcd));
+		Matcher matcher = pattern.matcher(inputString);
+		matcher.matches();
+		String nightingaleId = matcher.group(1);
+		//Update the decedent and composition back in the original system as well
+		updateDecedentAndCompositionInCMS(nightingaleId, dcd);
 		return returnNode;
 	}
 	
-	public void testPatientEverything() {
-		Parameters patientEverythingOutParameters = client.operation()
-				.onInstance(new IdType("Patient","66416286-5bda-4424-b28a-75ef3aadc9c8"))
-				.named("everything")
-				.withNoParameters(Parameters.class)
-				.useHttpGet()
-				.execute();
-		for(ParametersParameterComponent paramComp:patientEverythingOutParameters.getParameter()) {
-			System.out.print("Parameter Component Name:"+paramComp.getName());
+	public void updateDecedentAndCompositionInCMS(String edrsId, DeathCertificateDocument dcd) {
+		for(BundleEntryComponent bec:dcd.getEntry()) {
+			Resource resource = bec.getResource();
+			if(resource.getResourceType().equals(ResourceType.Patient)) {
+				Patient patient = (Patient)resource;
+				patient.addIdentifier(new Identifier().setSystem(nightingaleSubmissionService.getNightingaleURL()).setValue(edrsId));
+				client.update().resource(patient).execute();
+			}
+			if(resource.getResourceType().equals(ResourceType.Composition)) {
+				Composition composition = (Composition)resource;
+				client.update().resource(composition).execute();
+			}
 		}
 	}
 	
@@ -206,6 +209,7 @@ public class FhirCMSToVRDRService {
 				.useHttpGet()
 				.execute();
 		Bundle patientEverythingBundle = (Bundle)patientEverythingOutParameters.getParameterFirstRep().getResource();
+		Certifier certifier = null;
 		for(BundleEntryComponent bec: patientEverythingBundle.getEntry()) {
 			Resource resource = bec.getResource();
 			switch(resource.getResourceType()) {
@@ -243,6 +247,7 @@ public class FhirCMSToVRDRService {
 					break;
 				case Practitioner:
 					addPractitionerToDeathCertificate((Practitioner)resource, deathCertificate, deathCertificateDocument);
+					certifier = (Certifier)resource;
 					break;
 				case Procedure:
 					addProcedureToDeathCertificate((Procedure)resource, deathCertificate, deathCertificateDocument);
@@ -254,11 +259,6 @@ public class FhirCMSToVRDRService {
 					break;
 			}
 		}
-		
-		//TODO: Check for the identifier on the composition and use an UPDATE to the nightingale system
-		//TODO: Create a new identifier for nightingale's identifier
-		//TODO: Submit VRDR back to FHIR server via $transaction operation
-		//TODO: 
 		return deathCertificateDocument;
 	}
 	
@@ -266,12 +266,12 @@ public class FhirCMSToVRDRService {
 		if(condition instanceof CauseOfDeathCondition){
 			CauseOfDeathCondition profiledCond = (CauseOfDeathCondition)condition;
 			addReferenceToDeathCertificate(deathCertificate, profiledCond);
-			CommonUtil.addBundleEntry(dcd, profiledCond);
+			addBundleEntry(dcd, profiledCond);
 		}
 		else if(condition instanceof ConditionContributingToDeath){
 			ConditionContributingToDeath profiledCond = (ConditionContributingToDeath)condition;
 			addReferenceToDeathCertificate(deathCertificate, profiledCond);
-			CommonUtil.addBundleEntry(dcd, profiledCond);
+			addBundleEntry(dcd, profiledCond);
 		}
 	}
 	
@@ -279,23 +279,20 @@ public class FhirCMSToVRDRService {
 		if(documentReference instanceof DeathCertificateReference){
 			DeathCertificateReference profiledCond = (DeathCertificateReference)documentReference;
 			addReferenceToDeathCertificate(deathCertificate, profiledCond);
-			CommonUtil.addBundleEntry(dcd, profiledCond);
+			addBundleEntry(dcd, profiledCond);
 		}
 	}
 	
 	public void addListToDeathCertificate(ListResource listResource, DeathCertificate deathCertificate, DeathCertificateDocument dcd) {
-		if(listResource instanceof CauseOfDeathPathway) {
-			CauseOfDeathPathway profiledList = (CauseOfDeathPathway)listResource;
-			addReferenceToDeathCertificate(deathCertificate, profiledList);
-			CommonUtil.addBundleEntry(dcd, profiledList);
-		}
+		addReferenceToDeathCertificate(deathCertificate, listResource);
+		addBundleEntry(dcd, listResource);
 	}
 	
 	public void addLocationToDeathCertificate(Location location, DeathCertificate deathCertificate, DeathCertificateDocument dcd) {
 		if(location instanceof DispositionLocation){
 			DeathLocation profiledLocation = (DeathLocation)location;
 			addReferenceToDeathCertificate(deathCertificate, profiledLocation);
-			CommonUtil.addBundleEntry(dcd, profiledLocation);
+			addBundleEntry(dcd, profiledLocation);
 		}
 	}
 	
@@ -303,12 +300,12 @@ public class FhirCMSToVRDRService {
 		if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), AutopsyPerformedIndicatorUtil.code)){
 			AutopsyPerformedIndicator profiledObs = (AutopsyPerformedIndicator)observation;
 			addReferenceToDeathCertificate(deathCertificate, profiledObs);
-			CommonUtil.addBundleEntry(dcd, profiledObs);
+			addBundleEntry(dcd, profiledObs);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), BirthRecordIdentifierUtil.code)){
 			BirthRecordIdentifier profiledObs = (BirthRecordIdentifier)observation;
 			addReferenceToDeathCertificate(deathCertificate, profiledObs);
-			CommonUtil.addBundleEntry(dcd, profiledObs);
+			addBundleEntry(dcd, profiledObs);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), DeathDateUtil.code)){
 			DeathDate profiledObs = (DeathDate)observation;
@@ -319,72 +316,68 @@ public class FhirCMSToVRDRService {
 				DeathLocation deathLocation = new DeathLocation(location.getName(),location.getDescription(),
 						location.getTypeFirstRep(),location.getAddress(),location.getPhysicalType());
 				addReferenceToDeathCertificate(deathCertificate, deathLocation);
-				CommonUtil.addBundleEntry(dcd, deathLocation);
+				addBundleEntry(dcd, deathLocation);
 			}
 			addReferenceToDeathCertificate(deathCertificate, profiledObs);
-			CommonUtil.addBundleEntry(dcd, profiledObs);
+			addBundleEntry(dcd, profiledObs);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), DecedentAgeUtil.code)){
 			addReferenceToDeathCertificate(deathCertificate, observation);
-			CommonUtil.addBundleEntry(dcd, observation);
+			addBundleEntry(dcd, observation);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), DecedentDispositionMethodUtil.code)){
-			DecedentDispositionMethod profiledObs = (DecedentDispositionMethod)observation;
-			addReferenceToDeathCertificate(deathCertificate, profiledObs);
-			CommonUtil.addBundleEntry(dcd, profiledObs);
+			addReferenceToDeathCertificate(deathCertificate, observation);
+			addBundleEntry(dcd, observation);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), DecedentEducationLevelUtil.code)){
-			DecedentEducationLevel profiledObs = (DecedentEducationLevel)observation;
-			addReferenceToDeathCertificate(deathCertificate, profiledObs);
-			CommonUtil.addBundleEntry(dcd, profiledObs);
+			addReferenceToDeathCertificate(deathCertificate, observation);
+			addBundleEntry(dcd, observation);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), DecedentMilitaryServiceUtil.code)){
 			DecedentMilitaryService profiledObs = (DecedentMilitaryService)observation;
 			addReferenceToDeathCertificate(deathCertificate, profiledObs);
-			CommonUtil.addBundleEntry(dcd, profiledObs);
+			addBundleEntry(dcd, profiledObs);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), DecedentPregnancyUtil.code)){
 			DecedentPregnancy profiledObs = (DecedentPregnancy)observation;
 			addReferenceToDeathCertificate(deathCertificate, profiledObs);
-			CommonUtil.addBundleEntry(dcd, profiledObs);
+			addBundleEntry(dcd, profiledObs);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), DecedentTransportationRoleUtil.code)){
 			DecedentTransportationRole profiledObs = (DecedentTransportationRole)observation;
 			addReferenceToDeathCertificate(deathCertificate, profiledObs);
-			CommonUtil.addBundleEntry(dcd, profiledObs);
+			addBundleEntry(dcd, profiledObs);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), DecedentUsualWorkUtil.code)){
 			addReferenceToDeathCertificate(deathCertificate, observation);
-			CommonUtil.addBundleEntry(dcd, observation);
+			addBundleEntry(dcd, observation);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), ExaminerContactedUtil.code)){
 			ExaminerContacted profiledObs = (ExaminerContacted)observation;
 			addReferenceToDeathCertificate(deathCertificate, profiledObs);
-			CommonUtil.addBundleEntry(dcd, profiledObs);
+			addBundleEntry(dcd, profiledObs);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), InjuryIncidentUtil.code)){
 			InjuryIncident profiledObs = (InjuryIncident)observation;
-			CommonUtil.addSectionEntry(deathCertificate, profiledObs);
+			addSectionEntry(deathCertificate, profiledObs);
 			if(profiledObs.getPatientLocationExtension() != null) {
 				Reference locationRef = (Reference)profiledObs.getPatientLocationExtension().getValue();
 				Location location = client.read().resource(Location.class).withId(locationRef.getId()).execute();
 				InjuryLocation injuryLocation = new InjuryLocation(location.getName(),location.getDescription(),
 						location.getTypeFirstRep(),location.getAddress(),location.getPhysicalType());
-				CommonUtil.addSectionEntry(deathCertificate, injuryLocation);
-				CommonUtil.addBundleEntry(dcd, injuryLocation);
+				addSectionEntry(deathCertificate, injuryLocation);
+				addBundleEntry(dcd, injuryLocation);
 			}
 			addReferenceToDeathCertificate(deathCertificate, profiledObs);
-			CommonUtil.addBundleEntry(dcd, profiledObs);
+			addBundleEntry(dcd, profiledObs);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), MannerOfDeathUtil.code)){
-			MannerOfDeath profiledObs = (MannerOfDeath)observation;
-			addReferenceToDeathCertificate(deathCertificate, profiledObs);
-			CommonUtil.addBundleEntry(dcd, profiledObs);
+			addReferenceToDeathCertificate(deathCertificate, observation);
+			addBundleEntry(dcd, observation);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), TobaccoUseContributedToDeathUtil.code)){
-			TobaccoUseContributedToDeath profiledObs = (TobaccoUseContributedToDeath)observation;
-			addReferenceToDeathCertificate(deathCertificate, profiledObs);
-			CommonUtil.addBundleEntry(dcd, profiledObs);
+			addReferenceToDeathCertificate(deathCertificate, observation);
+			addBundleEntry(dcd, observation);
 		}
 	}
 	
@@ -392,7 +385,7 @@ public class FhirCMSToVRDRService {
 		if(patient instanceof Decedent){
 			Decedent profiledPatient = (Decedent)patient;
 			addReferenceToDeathCertificate(deathCertificate, profiledPatient);
-			CommonUtil.addBundleEntry(dcd, profiledPatient);
+			addBundleEntry(dcd, profiledPatient);
 		}
 	}
 	
@@ -416,18 +409,19 @@ public class FhirCMSToVRDRService {
 			}
 			Reference certifierReference = new Reference(profiledPrac.getIdElement().getIdPart());
 			newcac.setParty(certifierReference);
+			deathCertificate.setAttester(new ArrayList<CompositionAttesterComponent>());
 			deathCertificate.addAttester(newcac);
-			CommonUtil.addBundleEntry(dcd, profiledPrac);
+			addBundleEntry(dcd, profiledPrac);
 		}
 		else if(practitioner instanceof DeathPronouncementPerformer){
 			DeathPronouncementPerformer profiledPrac = (DeathPronouncementPerformer)practitioner;
 			addReferenceToDeathCertificate(deathCertificate, profiledPrac);
-			CommonUtil.addBundleEntry(dcd, profiledPrac);
+			addBundleEntry(dcd, profiledPrac);
 		}
 		else if(practitioner instanceof Mortician){
 			Mortician profiledPrac = (Mortician)practitioner;
 			addReferenceToDeathCertificate(deathCertificate, profiledPrac);
-			CommonUtil.addBundleEntry(dcd, profiledPrac);
+			addBundleEntry(dcd, profiledPrac);
 		}
 	}
 	
@@ -435,7 +429,7 @@ public class FhirCMSToVRDRService {
 		if(FHIRCMSToVRDRUtil.codeableConceptsEqual(procedure.getCode(), DeathCertificationUtil.codeFixedValue)){
 			DeathCertification profiledProc = (DeathCertification)procedure;
 			addReferenceToDeathCertificate(deathCertificate, profiledProc);
-			CommonUtil.addBundleEntry(dcd, profiledProc);
+			addBundleEntry(dcd, profiledProc);
 		}
 	}
 	
@@ -443,17 +437,17 @@ public class FhirCMSToVRDRService {
 		if(FHIRCMSToVRDRUtil.codeableConceptsEqual(relatedPerson.getRelationshipFirstRep(), DecedentFatherUtil.code)){
 			DecedentFather profiledRelatedPerson= (DecedentFather)relatedPerson;
 			addReferenceToDeathCertificate(deathCertificate, profiledRelatedPerson);
-			CommonUtil.addBundleEntry(dcd, profiledRelatedPerson);
+			addBundleEntry(dcd, profiledRelatedPerson);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(relatedPerson.getRelationshipFirstRep(), DecedentMotherUtil.code)){
 			DecedentMother profiledRelatedPerson= (DecedentMother)relatedPerson;
 			addReferenceToDeathCertificate(deathCertificate, profiledRelatedPerson);
-			CommonUtil.addBundleEntry(dcd, profiledRelatedPerson);
+			addBundleEntry(dcd, profiledRelatedPerson);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(relatedPerson.getRelationshipFirstRep(), DecedentSpouseUtil.code)){
 			DecedentSpouse profiledRelatedPerson= (DecedentSpouse)relatedPerson;
 			addReferenceToDeathCertificate(deathCertificate, profiledRelatedPerson);
-			CommonUtil.addBundleEntry(dcd, profiledRelatedPerson);
+			addBundleEntry(dcd, profiledRelatedPerson);
 		}
 	}
 	
@@ -470,7 +464,7 @@ public class FhirCMSToVRDRService {
 			}
 		}
 		if(!allreadyInCertificate) {
-			CommonUtil.addSectionEntry(deathCertificate, resource);
+			addSectionEntry(deathCertificate, resource);
 		}
 	}
 	
@@ -483,5 +477,20 @@ public class FhirCMSToVRDRService {
 			}
 		}
 		return null;
+	}
+	
+	private DeathCertificateDocument addBundleEntry(DeathCertificateDocument dcd,Resource resource) {
+		dcd.addEntry().setResource(resource).setFullUrl(resource.getResourceType().toString() + "/" + resource.getIdElement().getIdPart());
+		return dcd;
+	}
+	
+	public static DeathCertificate addSectionEntry(DeathCertificate deathCertificate,Resource resource) {
+		if(deathCertificate.getSection() != null && !deathCertificate.getSection().isEmpty()) {
+			deathCertificate.addSection(new SectionComponent());
+		}
+		SectionComponent sectionComponent = deathCertificate.getSectionFirstRep();
+		resource.getId();
+		sectionComponent.addEntry(new Reference(resource.getResourceType().toString() + "/" + resource.getIdElement().getIdPart()));
+		return deathCertificate;
 	}
 }

@@ -2,7 +2,7 @@ package edu.gatech.MDI.Model;
 
 import com.opencsv.bean.CsvBindByName;
 
-public class OpenMDIInputFields {
+public class MDIModelFields {
 	@CsvBindByName
 	public String SYSTEMID = "";
 	@CsvBindByName
@@ -212,6 +212,8 @@ public class OpenMDIInputFields {
 	@CsvBindByName
 	public String SURGDATE = "";
 	@CsvBindByName
+	public String SURGREASON = "";
+	@CsvBindByName
 	public String HCPROVIDER = "";
 	@CsvBindByName
 	public String CAUTOPSY = "";
@@ -221,7 +223,7 @@ public class OpenMDIInputFields {
 	public String CUSTODY = "";
 	public boolean success = false;
 	
-	public OpenMDIInputFields() {
+	public MDIModelFields() {
 		
 	}
 
@@ -927,6 +929,14 @@ public class OpenMDIInputFields {
 
 	public void setSURGDATE(String sURGDATE) {
 		SURGDATE = sURGDATE;
+	}
+	
+	public String getSURGREASON() {
+		return SURGREASON;
+	}
+
+	public void setSURGREASON(String sURGREASON) {
+		SURGREASON = sURGREASON;
 	}
 
 	public String getHCPROVIDER() {

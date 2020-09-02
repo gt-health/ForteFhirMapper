@@ -7,6 +7,7 @@ import java.net.UnknownHostException;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -24,21 +25,21 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 
-import edu.gatech.MDI.Model.OpenMDIInputFields;
+import edu.gatech.MDI.Model.MDIModelFields;
 import edu.gatech.Mapping.Service.CanaryValidationService;
 import edu.gatech.Mapping.Service.FhirCMSToVRDRService;
 import edu.gatech.Mapping.Service.NightingaleSubmissionService;
-import edu.gatech.Mapping.Service.MDIToVRDRService;
+import edu.gatech.Mapping.Service.MDIToFhirCMSService;
 import edu.gatech.Submission.Service.SubmitBundleService;
 
 @Controller
 public class UploadAndExportController {
-	MDIToVRDRService mappingService;
+	MDIToFhirCMSService mappingService;
 	SubmitBundleService submitBundleService;
 	FhirCMSToVRDRService fhirCMSToVRDRService;
 	
 	@Autowired
-	public UploadAndExportController(MDIToVRDRService mappingService, SubmitBundleService submitBundleService,FhirCMSToVRDRService fhirCMSToVRDRService) {
+	public UploadAndExportController(MDIToFhirCMSService mappingService, SubmitBundleService submitBundleService,FhirCMSToVRDRService fhirCMSToVRDRService) {
 		this.mappingService = mappingService;
 		this.submitBundleService = submitBundleService;
 		this.fhirCMSToVRDRService = fhirCMSToVRDRService;
@@ -50,7 +51,7 @@ public class UploadAndExportController {
     }
 
     @PostMapping("upload-csv-file")
-    public String uploadCSVFile(@RequestParam("file") MultipartFile file, Model model) {
+    public String uploadCSVFile(@RequestParam("file") MultipartFile file, @Value(" ${fhircms.submit}") boolean submitFlag, Model model) {
 
         // validate file
         if (file.isEmpty()) {
@@ -62,15 +63,15 @@ public class UploadAndExportController {
             try (Reader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
 
                 // create csv bean reader
-                CsvToBean<OpenMDIInputFields> csvToBean = new CsvToBeanBuilder(reader)
-                        .withType(OpenMDIInputFields.class)
+                CsvToBean<MDIModelFields> csvToBean = new CsvToBeanBuilder(reader)
+                        .withType(MDIModelFields.class)
                         .withIgnoreLeadingWhiteSpace(true)
                         .build();
 
                 // convert `CsvToBean` object to list of users
-                List<OpenMDIInputFields> inputFields = csvToBean.parse();
+                List<MDIModelFields> inputFields = csvToBean.parse();
                 String prettyFhirOutput = "";
-                for(OpenMDIInputFields inputField: inputFields) {
+                for(MDIModelFields inputField: inputFields) {
                 	String jsonBundle = mappingService.convertToVRDRString(inputField);
                 	System.out.println("JSON BUNDLE:");
                 	System.out.println(jsonBundle);
@@ -80,19 +81,19 @@ public class UploadAndExportController {
                     	prettyFhirOutput = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node);
                     }
                     // Submit to fhir server
+                    inputField.setSuccess(false);
                     System.out.println(jsonBundle);
-                    try {
-    	                ResponseEntity<String> response = submitBundleService.submitBundle(jsonBundle);
-    	                // save users list on model
-    	                if(response.getStatusCode() == HttpStatus.OK ) {
-    	                	inputField.setSuccess(true);
-    	                }
-    	                else {
-    	                	inputField.setSuccess(false);
-    	                }   
-                    }
-                    catch (HttpStatusCodeException e) {
-                    	inputField.setSuccess(false);
+                    if(submitFlag) {
+	                    try {
+	    	                ResponseEntity<String> response = submitBundleService.submitBundle(jsonBundle);
+	    	                // save users list on model
+	    	                if(response.getStatusCode() == HttpStatus.OK ) {
+	    	                	inputField.setSuccess(true);
+	    	                }
+	                    }
+	                    catch (HttpStatusCodeException e) {
+	                    	inputField.setSuccess(false);
+	                    }
                     }
                 }
                 model.addAttribute("inputFields", inputFields);
@@ -107,15 +108,10 @@ public class UploadAndExportController {
         }
         return "file-upload-status";
     }
-    @GetMapping("testPatientEverything")
-    public String testPatientEverything() {
-    	fhirCMSToVRDRService.testPatientEverything();
-        return "index";
-    }
     
     @GetMapping("submitEDRS")
-    public ResponseEntity<JsonNode> submitEDRSRecord(@RequestParam String systemIdentifier, @RequestParam String codeIdentifier,
-    		@RequestParam(defaultValue = "false") boolean validateOnly, @RequestParam(defaultValue = "false") boolean createOnly,
+    public ResponseEntity<JsonNode> submitEDRSRecord(@RequestParam(required = false) String patientIdentifier, @RequestParam(required = false) String systemIdentifier,
+    		@RequestParam(required = false) String codeIdentifier, @RequestParam(defaultValue = "false") boolean validateOnly, @RequestParam(defaultValue = "false") boolean createOnly,
     		@RequestParam(defaultValue = "false") boolean submitOnly) {
     	JsonNode returnNode = JsonNodeFactory.instance.objectNode();
     	try {

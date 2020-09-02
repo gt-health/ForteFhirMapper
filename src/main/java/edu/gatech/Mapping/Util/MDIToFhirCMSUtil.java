@@ -20,14 +20,13 @@ import org.hl7.fhir.r4.model.Resource;
 
 import edu.gatech.VRDR.model.util.CommonUtil;
 
-public class OpenMDIToVRDRUtil {
+public class MDIToFhirCMSUtil {
 	public static List<String> dateFormatStrings = Arrays.asList("MM/dd/yyyy",
 			"MM/dd/yy","dd-M-yyyy hh:mm:ss","dd MMMM yyyy","dd MMMM yyyy zzzz",
 			"E, dd MMM yyyy HH:mm:ss z","MM-dd-yy","MM-dd-yyyy", "MMMM DD, YYYY", "MMddyy", "YYYY");
 	public static List<String> timeFormatStrings = Arrays.asList("hh:mm:ss a", "hh:mm a",
 			"hh:mm:ss", "hh:mm","hhmm","hhmmss");
 	public static String ageRegex = "(\\d+)\\s*(year|month|week|day|hour|minute)";
-	public static String trueValueRegex = "yes|true";
 	public static List<String> nameFormatStrings = Arrays.asList("(.*),\\s{0,1}(.*)\\s(.*)", "(\\w+)\\s(\\w+)");
 	public static String convertUnitOfMeasureStringToCode(String uomString) {
 		switch(uomString) {
@@ -149,22 +148,6 @@ public class OpenMDIToVRDRUtil {
 		}
 
 	    return null;
-	}
-	
-	public static boolean parseBoolean(String boolString) {
-		Pattern r = Pattern.compile(trueValueRegex);
-	    Matcher m = r.matcher(boolString.toLowerCase());
-	    return m.find();
-	}
-	
-	public static CodeableConcept parseBooleanAndCreateCode(String boolString) {
-		boolean value = parseBoolean(boolString);
-		if(value) {
-			return CommonUtil.yesCode;
-		}
-		else {
-			return CommonUtil.noCode;
-		}
 	}
 	
 	public static Address createAddress(String street, String city,
