@@ -22,8 +22,8 @@ public class NightingaleSubmissionService {
 		this.restTemplate = new RestTemplate();
 	}
 	
-	public JsonNode submitRecord(String VRDRJson) {
-		String POSTendpoint = nightingaleURL + "api/v1/death_records";
+	public JsonNode submitRecord(String POSTendpoint, String VRDRJson) {
+		System.out.println("Submitting to nightingale at endpoint:" + POSTendpoint);
 		JsonNode response = JsonNodeFactory.instance.objectNode();
 		ResponseEntity<String> POSTresponse
 		  = restTemplate.postForEntity(POSTendpoint, VRDRJson, String.class);

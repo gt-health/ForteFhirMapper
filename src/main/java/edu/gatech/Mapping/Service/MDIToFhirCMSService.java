@@ -327,10 +327,6 @@ public class MDIToFhirCMSService {
 				martialCoding.setCode("I");
 				martialCoding.setDisplay("Interlocutory");
 			}
-			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.MARITAL, "Interlocut")) {
-				martialCoding.setCode("I");
-				martialCoding.setDisplay("Interlocutory");
-			}
 			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.MARITAL, "Never Polygamous")) {
 				martialCoding.setCode("P");
 				martialCoding.setDisplay("Polygamous");
@@ -534,26 +530,30 @@ public class MDIToFhirCMSService {
 		manner.addPerformer(certifierReference);
 		Coding mannerCoding = new Coding();
 		if(inputFields.MANNER != null && !inputFields.MANNER.isEmpty()) {
-			mannerCoding.setSystem("urn:mdi:temporary:code-MannerTypeVS");
+			mannerCoding.setSystem("http://snomed.info/sct");
 			if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.MANNER, "Homicide")) {
-				mannerCoding.setCode("H");
+				mannerCoding.setCode("27935005");
 				mannerCoding.setDisplay("Homicide");
 			}
 			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.MANNER, "Suicide")) {
-				mannerCoding.setCode("S");
+				mannerCoding.setCode("44301001");
 				mannerCoding.setDisplay("Suicide");
 			}
 			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.MANNER, "Accident")) {
-				mannerCoding.setCode("A");
-				mannerCoding.setDisplay("Accident");
+				mannerCoding.setCode("7878000");
+				mannerCoding.setDisplay("Accidental Death");
 			}
 			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.MANNER, "Natural")) {
-				mannerCoding.setCode("N");
+				mannerCoding.setCode("38605008");
 				mannerCoding.setDisplay("Natural");
 			}
+			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.MANNER, "Investigation")) {
+				mannerCoding.setCode("185973002");
+				mannerCoding.setDisplay("Patient awaiting investigation");
+			}
 			else {
-				mannerCoding.setCode("U");
-				mannerCoding.setDisplay("Unknown");
+				mannerCoding.setCode("65037004");
+				mannerCoding.setDisplay("Death, manner undetermined");
 			}
 		}
 		manner.setValue(new CodeableConcept().addCoding(mannerCoding));
@@ -786,12 +786,6 @@ public class MDIToFhirCMSService {
 	
 	private DeathLocation createDeathLocation(MDIModelFields inputFields) {
 		DeathLocation returnDeathLocation = new DeathLocation();
-		if(inputFields.DEATHPLACE != null && !inputFields.DEATHPLACE.isEmpty()) {
-			Extension deathPlace = new Extension();
-			deathPlace.setUrl("urn:mdi:temporary:code:categorization-of-death-place");
-			deathPlace.setValue(new StringType(inputFields.DEATHPLACE));
-			returnDeathLocation.addExtension(deathPlace);
-		}
 		Stream<String> deathAddrFields = Stream.of(inputFields.DEATHSTREET, inputFields.DEATHCITY,
 				inputFields.DEATHCOUNTY, inputFields.DEATHSTATE, inputFields.DEATHZIP);
 		if(!deathAddrFields.allMatch(x -> x == null || x.isEmpty())) {
@@ -799,70 +793,46 @@ public class MDIToFhirCMSService {
 					inputFields.DEATHCOUNTY, inputFields.DEATHSTATE, inputFields.DEATHZIP);
 			returnDeathLocation.setAddress(deathAddr);
 		}
-		if(inputFields.EVENTPLACE != null && !inputFields.EVENTPLACE.isEmpty()) {
-			CodeableConcept physicalTypeCode = new CodeableConcept();
-			Coding physicalTypeCoding = new Coding();
-			physicalTypeCoding.setSystem("http://hl7.org/fhir/ValueSet/location-physical-type");
-			if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.EVENTPLACE, "Site")) {
-				physicalTypeCoding.setCode("si");
-				physicalTypeCoding.setDisplay("Site");
+		CodeableConcept typeCode = new CodeableConcept();
+		Coding typeCoding = new Coding();
+		typeCoding.setSystem("http://snomed.info/sct");
+		if(inputFields.DEATHPLACE != null && !inputFields.DEATHPLACE.isEmpty()) {
+			//Adding deathplace as name and description as a stopgap measure.
+			returnDeathLocation.setName(inputFields.DEATHPLACE);
+			returnDeathLocation.setDescription(inputFields.DEATHPLACE);
+			if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.DEATHPLACE, "arrival") || MDIToFhirCMSUtil.containsIgnoreCase(inputFields.DEATHPLACE, "DOA")) {
+				typeCoding.setCode("63238001");
+				typeCoding.setDisplay("Dead on arrival at hospital");
 			}
-			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.EVENTPLACE, "Building")) {
-				physicalTypeCoding.setCode("bu");
-				physicalTypeCoding.setDisplay("Building");
+			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.DEATHPLACE, "home")) {
+				typeCoding.setCode("440081000124100");
+				typeCoding.setDisplay("Death in home");
 			}
-			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.EVENTPLACE, "wing")) {
-				physicalTypeCoding.setCode("wi");
-				physicalTypeCoding.setDisplay("Wing");
+			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.DEATHPLACE, "hospice")) {
+				typeCoding.setCode("440071000124103");
+				typeCoding.setDisplay("Death in hospice");
 			}
-			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.EVENTPLACE, "ward")) {
-				physicalTypeCoding.setCode("wa");
-				physicalTypeCoding.setDisplay("Ward");
+			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.DEATHPLACE, "hospital") || MDIToFhirCMSUtil.containsIgnoreCase(inputFields.DEATHPLACE, "emergency")) {
+				typeCoding.setCode("450391000124102");
+				typeCoding.setDisplay("Death in hospital-based emergency department or outpatient department (event)");
 			}
-			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.EVENTPLACE, "level")) {
-				physicalTypeCoding.setCode("lvl");
-				physicalTypeCoding.setDisplay("Level");
+			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.DEATHPLACE, "nursing")) {
+				typeCoding.setCode("450381000124100");
+				typeCoding.setDisplay("Death in nursing home or long term care facility (event)");
 			}
-			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.EVENTPLACE, "corridor")) {
-				physicalTypeCoding.setCode("co");
-				physicalTypeCoding.setDisplay("Corridor");
+			else{
+				typeCoding.setSystem("http://terminology.hl7.org/CodeSystem/v3-NullFlavor");
+				typeCoding.setCode("OTH");
+				typeCoding.setDisplay("other");
 			}
-			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.EVENTPLACE, "room")) {
-				physicalTypeCoding.setCode("ro");
-				physicalTypeCoding.setDisplay("Room");
-			}
-			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.EVENTPLACE, "bed")) {
-				physicalTypeCoding.setCode("bd");
-				physicalTypeCoding.setDisplay("Bed");
-			}
-			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.EVENTPLACE, "vechicle")) {
-				physicalTypeCoding.setCode("ve");
-				physicalTypeCoding.setDisplay("Vechicle");
-			}
-			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.EVENTPLACE, "house")) {
-				physicalTypeCoding.setCode("ho");
-				physicalTypeCoding.setDisplay("House");
-			}
-			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.EVENTPLACE, "cabinet")) {
-				physicalTypeCoding.setCode("ca");
-				physicalTypeCoding.setDisplay("Cabinet");
-			}
-			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.EVENTPLACE, "Road")) {
-				physicalTypeCoding.setCode("rd");
-				physicalTypeCoding.setDisplay("road");
-			}
-			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.EVENTPLACE, "Jurisdiction")) {
-				physicalTypeCoding.setCode("jdn");
-				physicalTypeCoding.setDisplay("Jurisidiction");
-			}
-			else {
-				physicalTypeCoding.setCode("area");
-				physicalTypeCoding.setDisplay("area");
-			}
-			
-			physicalTypeCode.addCoding(physicalTypeCoding);
-			returnDeathLocation.setPhysicalType(physicalTypeCode);
 		}
+		else {
+			typeCoding.setSystem("http://terminology.hl7.org/CodeSystem/v3-NullFlavor");
+			typeCoding.setCode("UNK");
+			typeCoding.setDisplay("unknown");
+		}
+		typeCode.addCoding(typeCoding);
+		returnDeathLocation.addType(typeCode);
 		Extension foundAddrExt = new Extension();
 		foundAddrExt.setUrl("urn:mdi:temporary:code:address-where-found-dead-unconscious-or-in-distress");
 		Address foundAddr = MDIToFhirCMSUtil.createAddress(inputFields.FOUNDADDR_STREET, inputFields.FOUNDADDR_CITY,

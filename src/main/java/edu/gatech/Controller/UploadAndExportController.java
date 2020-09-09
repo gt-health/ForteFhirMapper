@@ -5,6 +5,8 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.UnknownHostException;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,20 +31,30 @@ import edu.gatech.MDI.Model.MDIModelFields;
 import edu.gatech.Mapping.Service.CanaryValidationService;
 import edu.gatech.Mapping.Service.FhirCMSToVRDRService;
 import edu.gatech.Mapping.Service.NightingaleSubmissionService;
+import edu.gatech.Mapping.Service.VitalcheckSubmissionService;
 import edu.gatech.Mapping.Service.MDIToFhirCMSService;
 import edu.gatech.Submission.Service.SubmitBundleService;
+import edu.gatech.VRDR.model.DeathCertificateDocument;
 
 @Controller
 public class UploadAndExportController {
 	MDIToFhirCMSService mappingService;
 	SubmitBundleService submitBundleService;
 	FhirCMSToVRDRService fhirCMSToVRDRService;
+	private CanaryValidationService canaryValidationService;
+	private NightingaleSubmissionService nightingaleSubmissionService;
+	private VitalcheckSubmissionService vitalcheckSubmissionService; 
 	
 	@Autowired
-	public UploadAndExportController(MDIToFhirCMSService mappingService, SubmitBundleService submitBundleService,FhirCMSToVRDRService fhirCMSToVRDRService) {
+	public UploadAndExportController(MDIToFhirCMSService mappingService, SubmitBundleService submitBundleService,
+			FhirCMSToVRDRService fhirCMSToVRDRService,CanaryValidationService canaryValidationService,
+			NightingaleSubmissionService nightingaleSubmissionService, VitalcheckSubmissionService vitalcheckSubmissionService) {
 		this.mappingService = mappingService;
 		this.submitBundleService = submitBundleService;
 		this.fhirCMSToVRDRService = fhirCMSToVRDRService;
+		this.canaryValidationService = canaryValidationService;
+		this.nightingaleSubmissionService = nightingaleSubmissionService;
+		this.vitalcheckSubmissionService = vitalcheckSubmissionService;
 	}
 	
     @GetMapping("/")
@@ -112,10 +124,48 @@ public class UploadAndExportController {
     @GetMapping("submitEDRS")
     public ResponseEntity<JsonNode> submitEDRSRecord(@RequestParam(required = false) String patientIdentifier, @RequestParam(required = false) String systemIdentifier,
     		@RequestParam(required = false) String codeIdentifier, @RequestParam(defaultValue = "false") boolean validateOnly, @RequestParam(defaultValue = "false") boolean createOnly,
-    		@RequestParam(defaultValue = "false") boolean submitOnly) {
-    	JsonNode returnNode = JsonNodeFactory.instance.objectNode();
+    		@RequestParam(defaultValue = "false") boolean submitOnly, @RequestParam(required = true) String endpointURL, @RequestParam(required = true, defaultValue = "nightingale") String endpointMode) {
+    	ObjectNode returnNode = JsonNodeFactory.instance.objectNode();
     	try {
-			returnNode = fhirCMSToVRDRService.createRecordValidateAndSubmit(systemIdentifier, codeIdentifier, createOnly, validateOnly, submitOnly);
+			DeathCertificateDocument dcd = fhirCMSToVRDRService.createDCDFromBaseFhirServer(systemIdentifier, codeIdentifier);
+			String VRDRJson = fhirCMSToVRDRService.getJsonParser().encodeResourceToString(dcd);
+			String XMLJson = fhirCMSToVRDRService.getXmlParser().encodeResourceToString(dcd);
+			System.out.println("VRDR Submission Document:");
+			System.out.println(VRDRJson);
+			System.out.println(XMLJson);
+			//Create Only workflow
+			if(createOnly) {
+				ObjectMapper mapper = new ObjectMapper();
+				JsonNode VRDROnly = mapper.readTree(VRDRJson);
+				return new ResponseEntity<JsonNode>(VRDROnly, HttpStatus.OK);
+			}
+			returnNode.put("VRDR", VRDRJson);
+			//Validate Only workflow
+			if(validateOnly) {
+				JsonNode canaryIssues = canaryValidationService.validateVRDRAgainstCanary(VRDRJson);
+				returnNode.set("validationIssues",canaryIssues);
+				return new ResponseEntity<JsonNode>(returnNode, HttpStatus.OK);
+			}
+			//Nightingale submission
+			if(endpointMode.equalsIgnoreCase("nightingale")) {
+				JsonNode nightingaleResponse = nightingaleSubmissionService.submitRecord(endpointURL, VRDRJson);
+				Pattern pattern = Pattern.compile("CreatedID:(\\d+)");
+				String inputString = nightingaleResponse.get("message").asText().replaceAll(" ", "");
+				returnNode.put("Nightingale Response", nightingaleResponse.get("message").asText());
+				Matcher matcher = pattern.matcher(inputString);
+				matcher.matches();
+				String nightingaleId = matcher.group(1);
+				//Update the decedent and composition back in the original system as well
+				fhirCMSToVRDRService.updateDecedentAndCompositionInCMS(nightingaleId, dcd);
+			}
+			//Axiell submission
+			else if(endpointMode.equalsIgnoreCase("axiell")) {
+			}
+			//Vitalcheck submission
+			else if(endpointMode.equalsIgnoreCase("Vitalcheck")) {
+				JsonNode vitalCheckResponse = vitalcheckSubmissionService.submitRecord(endpointURL, dcd);
+				returnNode.put("vitalcheck response", vitalCheckResponse);
+			}
 		} catch (Exception ex) {
 			ex.printStackTrace(System.out);
             ObjectNode exceptionNode = JsonNodeFactory.instance.objectNode();

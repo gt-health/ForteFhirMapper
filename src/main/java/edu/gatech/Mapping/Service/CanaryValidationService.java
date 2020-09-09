@@ -28,6 +28,7 @@ public class CanaryValidationService {
 	public JsonNode validateVRDRAgainstCanary(String VRDRJson) {
 		String POSTendpoint = canaryURL + "endpoints/record/1";
 		String GETendpoint = canaryURL + "endpoints/get/1";
+		System.out.println("Validating with canary at endpoint:" + POSTendpoint);
 		JsonNode validationResults = JsonNodeFactory.instance.arrayNode();
 		ResponseEntity<String> POSTresponse
 		  = restTemplate.postForEntity(POSTendpoint, VRDRJson, String.class);

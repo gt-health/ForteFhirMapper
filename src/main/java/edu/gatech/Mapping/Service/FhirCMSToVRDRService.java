@@ -41,6 +41,7 @@ import ca.uhn.fhir.rest.client.api.IClientInterceptor;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor;
 import ca.uhn.fhir.rest.client.interceptor.LoggingInterceptor;
+import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import edu.gatech.Mapping.Util.FHIRCMSToVRDRUtil;
 import edu.gatech.VRDR.context.VRDRFhirContext;
 import edu.gatech.VRDR.model.AutopsyPerformedIndicator;
@@ -105,7 +106,8 @@ public class FhirCMSToVRDRService {
 	@Autowired
 	private NightingaleSubmissionService nightingaleSubmissionService;
 	private IGenericClient client;
-	private IParser parser;
+	private IParser jsonParser;
+	private IParser xmlParser;
 	@Autowired
 	public FhirCMSToVRDRService(VRDRFhirContext vrdrFhirContext, @Value("${fhircms.url}") String url,
 	@Value("${fhircms.basicAuth.username}") String basicUsername,
@@ -122,13 +124,14 @@ public class FhirCMSToVRDRService {
 		loggingInterceptor.setLogRequestSummary(true);
 		loggingInterceptor.setLogRequestBody(true);
 		client.registerInterceptor(loggingInterceptor);
-		parser = vrdrFhirContext.getCtx().newJsonParser();
+		jsonParser = vrdrFhirContext.getCtx().newJsonParser();
+		xmlParser = vrdrFhirContext.getCtx().newXmlParser();
 	}
 	
-	public JsonNode createRecordValidateAndSubmit(String patientIdentifierSystem, String patientIdentifierCode, boolean createOnly, boolean validateOnly, boolean submitOnly) throws Exception {
+	public JsonNode createRecordValidateAndSubmit(String submitEndpoint, String patientIdentifierSystem, String patientIdentifierCode, boolean createOnly, boolean validateOnly, boolean submitOnly) throws Exception {
 		ObjectNode returnNode = JsonNodeFactory.instance.objectNode();
 		DeathCertificateDocument dcd = createDCDFromBaseFhirServer(patientIdentifierSystem, patientIdentifierCode);
-		String VRDRJson = parser.encodeResourceToString(dcd);
+		String VRDRJson = jsonParser.encodeResourceToString(dcd);
 		System.out.println("VRDR Submission Document:");
 		System.out.println(VRDRJson);
 		if(createOnly) {
@@ -144,7 +147,7 @@ public class FhirCMSToVRDRService {
 		if(validateOnly) {
 			return returnNode;
 		}
-		JsonNode nightingaleResponse = nightingaleSubmissionService.submitRecord(VRDRJson);
+		JsonNode nightingaleResponse = nightingaleSubmissionService.submitRecord(submitEndpoint, VRDRJson);
 		Pattern pattern = Pattern.compile("CreatedID:(\\d+)");
 		String inputString = nightingaleResponse.get("message").asText().replaceAll(" ", "");
 		returnNode.put("Nightingale Response", nightingaleResponse.get("message").asText());
@@ -289,34 +292,33 @@ public class FhirCMSToVRDRService {
 	}
 	
 	public void addLocationToDeathCertificate(Location location, DeathCertificate deathCertificate, DeathCertificateDocument dcd) {
-		if(location instanceof DispositionLocation){
-			DeathLocation profiledLocation = (DeathLocation)location;
-			addReferenceToDeathCertificate(deathCertificate, profiledLocation);
-			addBundleEntry(dcd, profiledLocation);
-		}
+		addReferenceToDeathCertificate(deathCertificate, location);
+		addBundleEntry(dcd, location);
 	}
 	
 	public void addObservationToDeathCertificate(Observation observation, DeathCertificate deathCertificate, DeathCertificateDocument dcd, IGenericClient client) {
 		if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), AutopsyPerformedIndicatorUtil.code)){
-			AutopsyPerformedIndicator profiledObs = (AutopsyPerformedIndicator)observation;
-			addReferenceToDeathCertificate(deathCertificate, profiledObs);
-			addBundleEntry(dcd, profiledObs);
+			addReferenceToDeathCertificate(deathCertificate, observation);
+			addBundleEntry(dcd, observation);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), BirthRecordIdentifierUtil.code)){
-			BirthRecordIdentifier profiledObs = (BirthRecordIdentifier)observation;
-			addReferenceToDeathCertificate(deathCertificate, profiledObs);
-			addBundleEntry(dcd, profiledObs);
+			addReferenceToDeathCertificate(deathCertificate, observation);
+			addBundleEntry(dcd, observation);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), DeathDateUtil.code)){
 			DeathDate profiledObs = (DeathDate)observation;
 			// Pull in referenced DeathLocation
+			// Removed while extension location information doesn't seem to persist correctly into fhir server
 			if(profiledObs.getPatientLocationExtension() != null) {
 				Reference locationRef = (Reference)profiledObs.getPatientLocationExtension().getValue();
-				Location location = client.read().resource(Location.class).withId(locationRef.getReference()).execute();
-				DeathLocation deathLocation = new DeathLocation(location.getName(),location.getDescription(),
-						location.getTypeFirstRep(),location.getAddress(),location.getPhysicalType());
-				addReferenceToDeathCertificate(deathCertificate, deathLocation);
-				addBundleEntry(dcd, deathLocation);
+				try {
+					Location location = client.read().resource(Location.class).withId(locationRef.getReference()).execute();
+					addReferenceToDeathCertificate(deathCertificate, location );
+					addBundleEntry(dcd, location);
+				}
+				catch(ResourceNotFoundException e) {
+					System.out.println(e.getMessage());
+				}
 			}
 			addReferenceToDeathCertificate(deathCertificate, profiledObs);
 			addBundleEntry(dcd, profiledObs);
@@ -334,28 +336,24 @@ public class FhirCMSToVRDRService {
 			addBundleEntry(dcd, observation);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), DecedentMilitaryServiceUtil.code)){
-			DecedentMilitaryService profiledObs = (DecedentMilitaryService)observation;
-			addReferenceToDeathCertificate(deathCertificate, profiledObs);
-			addBundleEntry(dcd, profiledObs);
+			addReferenceToDeathCertificate(deathCertificate, observation);
+			addBundleEntry(dcd, observation);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), DecedentPregnancyUtil.code)){
-			DecedentPregnancy profiledObs = (DecedentPregnancy)observation;
-			addReferenceToDeathCertificate(deathCertificate, profiledObs);
-			addBundleEntry(dcd, profiledObs);
+			addReferenceToDeathCertificate(deathCertificate, observation);
+			addBundleEntry(dcd, observation);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), DecedentTransportationRoleUtil.code)){
-			DecedentTransportationRole profiledObs = (DecedentTransportationRole)observation;
-			addReferenceToDeathCertificate(deathCertificate, profiledObs);
-			addBundleEntry(dcd, profiledObs);
+			addReferenceToDeathCertificate(deathCertificate, observation);
+			addBundleEntry(dcd, observation);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), DecedentUsualWorkUtil.code)){
 			addReferenceToDeathCertificate(deathCertificate, observation);
 			addBundleEntry(dcd, observation);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), ExaminerContactedUtil.code)){
-			ExaminerContacted profiledObs = (ExaminerContacted)observation;
-			addReferenceToDeathCertificate(deathCertificate, profiledObs);
-			addBundleEntry(dcd, profiledObs);
+			addReferenceToDeathCertificate(deathCertificate, observation);
+			addBundleEntry(dcd, observation);
 		}
 		else if(FHIRCMSToVRDRUtil.codeableConceptsEqual(observation.getCode(), InjuryIncidentUtil.code)){
 			InjuryIncident profiledObs = (InjuryIncident)observation;
@@ -485,12 +483,34 @@ public class FhirCMSToVRDRService {
 	}
 	
 	public static DeathCertificate addSectionEntry(DeathCertificate deathCertificate,Resource resource) {
-		if(deathCertificate.getSection() != null && !deathCertificate.getSection().isEmpty()) {
+		if(deathCertificate.getSection() == null || deathCertificate.getSection().isEmpty()) {
 			deathCertificate.addSection(new SectionComponent());
 		}
 		SectionComponent sectionComponent = deathCertificate.getSectionFirstRep();
+		for(Reference reference:sectionComponent.getEntry()) {
+			if(reference.getReference().contains(resource.getIdElement().getIdPart())) {
+				//Resource allready a section in the deathCertificate. Return
+				return deathCertificate;
+			}
+		}
 		resource.getId();
 		sectionComponent.addEntry(new Reference(resource.getResourceType().toString() + "/" + resource.getIdElement().getIdPart()));
 		return deathCertificate;
+	}
+
+	public IParser getJsonParser() {
+		return jsonParser;
+	}
+
+	public void setJsonParser(IParser parser) {
+		this.jsonParser = parser;
+	}
+	
+	public IParser getXmlParser() {
+		return xmlParser;
+	}
+
+	public void setXmlParser(IParser parser) {
+		this.xmlParser = parser;
 	}
 }
