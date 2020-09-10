@@ -24,6 +24,7 @@ import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.DocumentReference;
 import org.hl7.fhir.r4.model.DocumentReference.DocumentReferenceContentComponent;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
+import org.hl7.fhir.r4.model.HumanName.NameUse;
 import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.Identifier;
@@ -147,7 +148,7 @@ public class MDIToFhirCMSService {
 		}
 		// Handle Injury Incident
 		Stream<String> injuryIncidentFields = Stream.of(inputFields.CHOWNINJURY, inputFields.ATWORK,
-				inputFields.JOBRELATED, inputFields.EVENTDATE, inputFields.EVENTTIME, inputFields.CIDATEFLAG,
+				inputFields.JOBRELATED, inputFields.CINJDATE, inputFields.CINJTIME, inputFields.CIDATEFLAG,
 				inputFields.CUSTODY);
 		if(!injuryIncidentFields.allMatch(x -> x == null || x.isEmpty())) {
 			InjuryIncident injuryIncident = createInjuryIncident(inputFields, decedentReference, injuryLocation);
@@ -263,6 +264,7 @@ public class MDIToFhirCMSService {
 			name.addGiven(inputFields.FIRSTNAME);
 			name.setFamily(inputFields.LASTNAME);
 			name.addGiven(inputFields.MIDNAME);
+			name.setUse(NameUse.OFFICIAL);
 			returnDecedent.addName(name);
 		}
 		if(inputFields.RACE != null && !inputFields.RACE.isEmpty()) {
@@ -448,16 +450,16 @@ public class MDIToFhirCMSService {
 				}
 			}
 		}
-		if(inputFields.EVENTDATE != null && !inputFields.EVENTDATE.isEmpty()) {
-			Date reportDate = MDIToFhirCMSUtil.parseDate(inputFields.EVENTDATE);
-			if(inputFields.EVENTTIME != null && !inputFields.EVENTTIME.isEmpty()) {
-				MDIToFhirCMSUtil.addTimeToDate(reportDate, inputFields.EVENTTIME);
+		if(inputFields.CINJDATE != null && !inputFields.CINJDATE.isEmpty()) {
+			Date reportDate = MDIToFhirCMSUtil.parseDate(inputFields.CINJDATE);
+			if(inputFields.CINJTIME != null && !inputFields.CINJTIME.isEmpty()) {
+				MDIToFhirCMSUtil.addTimeToDate(reportDate, inputFields.CINJTIME);
 			}
 			returnIncident.setEffective(new DateTimeType(reportDate));
 		}
 		if(inputFields.CIDATEFLAG != null && !inputFields.CIDATEFLAG.isEmpty()) {
 			Extension qualificationExtension = new Extension();
-			qualificationExtension.setUrl("urn:mdi:temporary:code:qualifiction-of-injury-date");
+			qualificationExtension.setUrl("urn:mdi:temporary:code:qualification-of-injury-date");
 			qualificationExtension.setValue(new StringType(inputFields.CIDATEFLAG));
 			returnIncident.addExtension(qualificationExtension);
 		}
@@ -511,6 +513,9 @@ public class MDIToFhirCMSService {
 		String[] otherCauses = inputFields.OSCOND.split(";");
 		List<String> listArrayOtherCauses = Arrays.asList(otherCauses);
 		for(String otherCause:listArrayOtherCauses) {
+			if(otherCause.isEmpty()) {
+				continue;
+			}
 			ConditionContributingToDeath conditionContrib = new ConditionContributingToDeath();
 			if(decedentReference != null) {
 				conditionContrib.setSubject(decedentReference);
@@ -519,7 +524,6 @@ public class MDIToFhirCMSService {
 				conditionContrib.setCertifier(certifier);
 			}
 			conditionContrib.setCode(new CodeableConcept().setText(otherCause));
-			returnCoDPathway.addEntry(new ListEntryComponent().setItem(new Reference(conditionContrib.getId())));
 			MDIToFhirCMSUtil.addResourceToBundle(bundle, conditionContrib);
 		}
 		return returnCoDPathway;
@@ -710,11 +714,14 @@ public class MDIToFhirCMSService {
 			if(inputFields.PRNTIME != null && !inputFields.PRNTIME.isEmpty()) {
 				MDIToFhirCMSUtil.addTimeToDate(prnDate, inputFields.PRNTIME);
 			}
-			returnDeathDate.addDatePronouncedDead(new DateTimeType(prnDate));
+			DateTimeType deathDT = new DateTimeType(prnDate);
+			returnDeathDate.setEffective(deathDT);
+			returnDeathDate.setValue(deathDT);
+			returnDeathDate.addDatePronouncedDead(deathDT);
 		}
 		if(inputFields.CDEATHFLAG != null && !inputFields.CDEATHFLAG.isEmpty()) {
 			Extension qualificationExtension = new Extension();
-			qualificationExtension.setUrl("urn:mdi:temporary:code:qualifiction-of-death-date");
+			qualificationExtension.setUrl("urn:mdi:temporary:code:qualification-of-death-date");
 			qualificationExtension.setValue(new StringType(inputFields.CDEATHFLAG));
 			returnDeathDate.addExtension(qualificationExtension);
 		}

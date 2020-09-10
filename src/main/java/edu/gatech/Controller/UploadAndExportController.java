@@ -150,6 +150,11 @@ public class UploadAndExportController {
 			if(endpointMode.equalsIgnoreCase("nightingale")) {
 				JsonNode nightingaleResponse = nightingaleSubmissionService.submitRecord(endpointURL, VRDRJson);
 				Pattern pattern = Pattern.compile("CreatedID:(\\d+)");
+				//Sometimes real response is embedded in a key name "PostEDRSResult"
+				if(nightingaleResponse.has("PostEDRSResult")) {
+					ObjectMapper objectMapper = new ObjectMapper();
+					nightingaleResponse = objectMapper.readTree(nightingaleResponse.get("PostEDRSResult").asText());
+				}
 				String inputString = nightingaleResponse.get("message").asText().replaceAll(" ", "");
 				returnNode.put("Nightingale Response", nightingaleResponse.get("message").asText());
 				Matcher matcher = pattern.matcher(inputString);
