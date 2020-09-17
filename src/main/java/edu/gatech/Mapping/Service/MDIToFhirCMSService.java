@@ -30,6 +30,7 @@ import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.ListResource.ListEntryComponent;
 import org.hl7.fhir.r4.model.Location;
+import org.hl7.fhir.r4.model.Meta;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Observation.ObservationComponentComponent;
 import org.hl7.fhir.r4.model.Observation.ObservationStatus;
@@ -288,8 +289,11 @@ public class MDIToFhirCMSService {
 			if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.ETHNICITY, "Not Hispanic") || MDIToFhirCMSUtil.containsIgnoreCase(inputFields.ETHNICITY, "Malaysian")) {
 				returnDecedent.setEthnicity("2186-5", "", inputFields.ETHNICITY);
 			}
-			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.ETHNICITY, "Hispanic") || MDIToFhirCMSUtil.containsIgnoreCase(inputFields.ETHNICITY, "Cuban") || MDIToFhirCMSUtil.containsIgnoreCase(inputFields.ETHNICITY, "Salvadoran") ||MDIToFhirCMSUtil.containsIgnoreCase(inputFields.ETHNICITY, "Latino")) {
+			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.ETHNICITY, "Hispanic") || MDIToFhirCMSUtil.containsIgnoreCase(inputFields.ETHNICITY, "Salvadoran") ||MDIToFhirCMSUtil.containsIgnoreCase(inputFields.ETHNICITY, "Latino")) {
 				returnDecedent.setEthnicity("2135-2", "", inputFields.ETHNICITY);
+			}
+			else if(MDIToFhirCMSUtil.containsIgnoreCase(inputFields.ETHNICITY, "Cuban")) {
+				returnDecedent.setEthnicity("2135-2", "2182-4", inputFields.ETHNICITY);
 			}
 		}
 		if(inputFields.GENDER != null && !inputFields.GENDER.isEmpty()) {
@@ -764,6 +768,9 @@ public class MDIToFhirCMSService {
 	
 	private Observation createCaseYearObs(MDIModelFields inputFields, Reference decedentReference) throws ParseException {
 		Observation returnObs = new Observation();
+		Meta meta = returnObs.getMeta();
+		meta.addProfile("notvalid://empty-profile");
+		returnObs.setMeta(meta);
 		returnObs.setStatus(ObservationStatus.FINAL);
 		returnObs.setSubject(decedentReference);
 		returnObs.setCode(new CodeableConcept().addCoding(new Coding(
@@ -777,6 +784,9 @@ public class MDIToFhirCMSService {
 	
 	private Observation createHospitalDateTime(MDIModelFields inputFields, Reference decedentReference) throws ParseException {
 		Observation returnObs = new Observation();
+		Meta meta = returnObs.getMeta();
+		meta.addProfile("notvalid://empty-profile");
+		returnObs.setMeta(meta);
 		returnObs.setStatus(ObservationStatus.FINAL);
 		returnObs.setSubject(decedentReference);
 		returnObs.setCode(new CodeableConcept().addCoding(new Coding(
@@ -871,6 +881,9 @@ public class MDIToFhirCMSService {
 	
 	private Procedure createSurgeryProc(MDIModelFields inputFields, Reference decedentReference) throws ParseException {
 		Procedure returnProcedure = new Procedure();
+		Meta meta = returnProcedure.getMeta();
+		meta.addProfile("notvalid://empty-profile");
+		returnProcedure.setMeta(meta);
 		returnProcedure.setSubject(decedentReference);
 		returnProcedure.setCategory(new CodeableConcept().addCoding(new Coding(
 				"http://snomed.info/sct","387713003","Surgical procedure")));

@@ -17,6 +17,7 @@ import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.ListResource;
 import org.hl7.fhir.r4.model.Location;
+import org.hl7.fhir.r4.model.Meta;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
@@ -128,43 +129,12 @@ public class FhirCMSToVRDRService {
 		xmlParser = vrdrFhirContext.getCtx().newXmlParser();
 	}
 	
-	public JsonNode createRecordValidateAndSubmit(String submitEndpoint, String patientIdentifierSystem, String patientIdentifierCode, boolean createOnly, boolean validateOnly, boolean submitOnly) throws Exception {
-		ObjectNode returnNode = JsonNodeFactory.instance.objectNode();
-		DeathCertificateDocument dcd = createDCDFromBaseFhirServer(patientIdentifierSystem, patientIdentifierCode);
-		String VRDRJson = jsonParser.encodeResourceToString(dcd);
-		System.out.println("VRDR Submission Document:");
-		System.out.println(VRDRJson);
-		if(createOnly) {
-			ObjectMapper mapper = new ObjectMapper();
-			JsonNode VRDROnly = mapper.readTree(VRDRJson);
-			return VRDROnly;
-		}
-		returnNode.put("VRDR", VRDRJson);
-		if(!submitOnly) {
-			JsonNode canaryIssues = canaryValidationService.validateVRDRAgainstCanary(VRDRJson);
-			returnNode.set("validationIssues",canaryIssues);
-		}
-		if(validateOnly) {
-			return returnNode;
-		}
-		JsonNode nightingaleResponse = nightingaleSubmissionService.submitRecord(submitEndpoint, VRDRJson);
-		Pattern pattern = Pattern.compile("CreatedID:(\\d+)");
-		String inputString = nightingaleResponse.get("message").asText().replaceAll(" ", "");
-		returnNode.put("Nightingale Response", nightingaleResponse.get("message").asText());
-		Matcher matcher = pattern.matcher(inputString);
-		matcher.matches();
-		String nightingaleId = matcher.group(1);
-		//Update the decedent and composition back in the original system as well
-		updateDecedentAndCompositionInCMS(nightingaleId, dcd);
-		return returnNode;
-	}
-	
-	public void updateDecedentAndCompositionInCMS(String edrsId, DeathCertificateDocument dcd) {
+	public void updateDecedentAndCompositionInCMS(String edrsSystemUrl, String edrsId, DeathCertificateDocument dcd) {
 		for(BundleEntryComponent bec:dcd.getEntry()) {
 			Resource resource = bec.getResource();
 			if(resource.getResourceType().equals(ResourceType.Patient)) {
 				Patient patient = (Patient)resource;
-				patient.addIdentifier(new Identifier().setSystem(nightingaleSubmissionService.getNightingaleURL()).setValue(edrsId));
+				patient.addIdentifier(new Identifier().setSystem(edrsSystemUrl).setValue(edrsId));
 				client.update().resource(patient).execute();
 			}
 			if(resource.getResourceType().equals(ResourceType.Composition)) {
@@ -215,6 +185,11 @@ public class FhirCMSToVRDRService {
 		Certifier certifier = null;
 		for(BundleEntryComponent bec: patientEverythingBundle.getEntry()) {
 			Resource resource = bec.getResource();
+			Meta meta = resource.getMeta();
+			if(meta.isEmpty()) {
+				meta.addProfile("notvalid://empty-profile");
+				resource.setMeta(meta);
+			}
 			switch(resource.getResourceType()) {
 				case CodeSystem:
 					break;
@@ -360,11 +335,16 @@ public class FhirCMSToVRDRService {
 			addSectionEntry(deathCertificate, profiledObs);
 			if(profiledObs.getPatientLocationExtension() != null) {
 				Reference locationRef = (Reference)profiledObs.getPatientLocationExtension().getValue();
-				Location location = client.read().resource(Location.class).withId(locationRef.getId()).execute();
-				InjuryLocation injuryLocation = new InjuryLocation(location.getName(),location.getDescription(),
-						location.getTypeFirstRep(),location.getAddress(),location.getPhysicalType());
-				addSectionEntry(deathCertificate, injuryLocation);
-				addBundleEntry(dcd, injuryLocation);
+				try {
+					Location location = client.read().resource(Location.class).withId(locationRef.getId()).execute();
+					InjuryLocation injuryLocation = new InjuryLocation(location.getName(),location.getDescription(),
+							location.getTypeFirstRep(),location.getAddress(),location.getPhysicalType());
+					addSectionEntry(deathCertificate, injuryLocation);
+					addBundleEntry(dcd, injuryLocation);
+				}
+				catch(NullPointerException e) {
+					System.out.println(e.getMessage());
+				}
 			}
 			addReferenceToDeathCertificate(deathCertificate, profiledObs);
 			addBundleEntry(dcd, profiledObs);
@@ -424,11 +404,8 @@ public class FhirCMSToVRDRService {
 	}
 	
 	public void addProcedureToDeathCertificate(Procedure procedure, DeathCertificate deathCertificate, DeathCertificateDocument dcd) {
-		if(FHIRCMSToVRDRUtil.codeableConceptsEqual(procedure.getCode(), DeathCertificationUtil.codeFixedValue)){
-			DeathCertification profiledProc = (DeathCertification)procedure;
-			addReferenceToDeathCertificate(deathCertificate, profiledProc);
-			addBundleEntry(dcd, profiledProc);
-		}
+		addReferenceToDeathCertificate(deathCertificate, procedure);
+		addBundleEntry(dcd, procedure);
 	}
 	
 	public void addRelatedPersonToDeathCertificate(RelatedPerson relatedPerson, DeathCertificate deathCertificate, DeathCertificateDocument dcd) {
@@ -512,5 +489,13 @@ public class FhirCMSToVRDRService {
 
 	public void setXmlParser(IParser parser) {
 		this.xmlParser = parser;
+	}
+
+	public VRDRFhirContext getVrdrFhirContext() {
+		return vrdrFhirContext;
+	}
+
+	public void setVrdrFhirContext(VRDRFhirContext vrdrFhirContext) {
+		this.vrdrFhirContext = vrdrFhirContext;
 	}
 }

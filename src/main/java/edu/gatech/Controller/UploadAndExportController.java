@@ -1,13 +1,24 @@
 package edu.gatech.Controller;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.UnknownHostException;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
+import org.hl7.fhir.r4.model.DetectedIssue;
+import org.hl7.fhir.r4.model.ResourceType;
+import org.hl7.fhir.r4.model.Extension;
+import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.MessageHeader;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -33,28 +44,34 @@ import edu.gatech.Mapping.Service.FhirCMSToVRDRService;
 import edu.gatech.Mapping.Service.NightingaleSubmissionService;
 import edu.gatech.Mapping.Service.VitalcheckSubmissionService;
 import edu.gatech.Mapping.Service.MDIToFhirCMSService;
+import edu.gatech.Submission.Configuration.SubmissionSourcesConfiguration;
+import edu.gatech.Submission.Entity.PatientSubmit;
+import edu.gatech.Submission.Entity.SourceStatus;
+import edu.gatech.Submission.Entity.Status;
+import edu.gatech.Submission.Repository.PatientSubmitRepository;
 import edu.gatech.Submission.Service.SubmitBundleService;
 import edu.gatech.VRDR.model.DeathCertificateDocument;
 
 @Controller
 public class UploadAndExportController {
-	MDIToFhirCMSService mappingService;
-	SubmitBundleService submitBundleService;
-	FhirCMSToVRDRService fhirCMSToVRDRService;
-	private CanaryValidationService canaryValidationService;
-	private NightingaleSubmissionService nightingaleSubmissionService;
-	private VitalcheckSubmissionService vitalcheckSubmissionService; 
-	
 	@Autowired
-	public UploadAndExportController(MDIToFhirCMSService mappingService, SubmitBundleService submitBundleService,
-			FhirCMSToVRDRService fhirCMSToVRDRService,CanaryValidationService canaryValidationService,
-			NightingaleSubmissionService nightingaleSubmissionService, VitalcheckSubmissionService vitalcheckSubmissionService) {
-		this.mappingService = mappingService;
-		this.submitBundleService = submitBundleService;
-		this.fhirCMSToVRDRService = fhirCMSToVRDRService;
-		this.canaryValidationService = canaryValidationService;
-		this.nightingaleSubmissionService = nightingaleSubmissionService;
-		this.vitalcheckSubmissionService = vitalcheckSubmissionService;
+	MDIToFhirCMSService mappingService;
+	@Autowired
+	SubmitBundleService submitBundleService;
+	@Autowired
+	FhirCMSToVRDRService fhirCMSToVRDRService;
+	@Autowired
+	private CanaryValidationService canaryValidationService;
+	@Autowired
+	private NightingaleSubmissionService nightingaleSubmissionService;
+	@Autowired
+	private VitalcheckSubmissionService vitalcheckSubmissionService;
+	@Autowired
+	private SubmissionSourcesConfiguration submissionSourcesConfiguration;
+	@Autowired
+	private PatientSubmitRepository patientSubmitRepository;
+	
+	public UploadAndExportController() {
 	}
 	
     @GetMapping("/")
@@ -125,7 +142,8 @@ public class UploadAndExportController {
     public ResponseEntity<JsonNode> submitEDRSRecord(@RequestParam(required = false) String patientIdentifier, @RequestParam(required = false) String systemIdentifier,
     		@RequestParam(required = false) String codeIdentifier, @RequestParam(defaultValue = "false") boolean validateOnly, @RequestParam(defaultValue = "false") boolean createOnly,
     		@RequestParam(defaultValue = "false") boolean submitOnly, @RequestParam(required = true) String endpointURL, @RequestParam(required = true, defaultValue = "nightingale") String endpointMode) {
-    	ObjectNode returnNode = JsonNodeFactory.instance.objectNode();
+    	ObjectMapper mapper = new ObjectMapper();
+    	SourceStatus returnSource = new SourceStatus(endpointURL);
     	try {
 			DeathCertificateDocument dcd = fhirCMSToVRDRService.createDCDFromBaseFhirServer(systemIdentifier, codeIdentifier);
 			String VRDRJson = fhirCMSToVRDRService.getJsonParser().encodeResourceToString(dcd);
@@ -135,41 +153,26 @@ public class UploadAndExportController {
 			System.out.println(XMLJson);
 			//Create Only workflow
 			if(createOnly) {
-				ObjectMapper mapper = new ObjectMapper();
 				JsonNode VRDROnly = mapper.readTree(VRDRJson);
 				return new ResponseEntity<JsonNode>(VRDROnly, HttpStatus.OK);
 			}
-			returnNode.put("VRDR", VRDRJson);
-			//Validate Only workflow
+			/*//Validate Only workflow
 			if(validateOnly) {
 				JsonNode canaryIssues = canaryValidationService.validateVRDRAgainstCanary(VRDRJson);
 				returnNode.set("validationIssues",canaryIssues);
 				return new ResponseEntity<JsonNode>(returnNode, HttpStatus.OK);
-			}
+			}*/
 			//Nightingale submission
 			if(endpointMode.equalsIgnoreCase("nightingale")) {
-				JsonNode nightingaleResponse = nightingaleSubmissionService.submitRecord(endpointURL, VRDRJson);
-				Pattern pattern = Pattern.compile("CreatedID:(\\d+)");
-				//Sometimes real response is embedded in a key name "PostEDRSResult"
-				if(nightingaleResponse.has("PostEDRSResult")) {
-					ObjectMapper objectMapper = new ObjectMapper();
-					nightingaleResponse = objectMapper.readTree(nightingaleResponse.get("PostEDRSResult").asText());
-				}
-				String inputString = nightingaleResponse.get("message").asText().replaceAll(" ", "");
-				returnNode.put("Nightingale Response", nightingaleResponse.get("message").asText());
-				Matcher matcher = pattern.matcher(inputString);
-				matcher.matches();
-				String nightingaleId = matcher.group(1);
-				//Update the decedent and composition back in the original system as well
-				fhirCMSToVRDRService.updateDecedentAndCompositionInCMS(nightingaleId, dcd);
+				returnSource = handleNightingaleSubmission(endpointURL, dcd, returnSource);
+				
 			}
 			//Axiell submission
 			else if(endpointMode.equalsIgnoreCase("axiell")) {
 			}
 			//Vitalcheck submission
 			else if(endpointMode.equalsIgnoreCase("Vitalcheck")) {
-				JsonNode vitalCheckResponse = vitalcheckSubmissionService.submitRecord(endpointURL, dcd);
-				returnNode.put("vitalcheck response", vitalCheckResponse);
+				returnSource = handleVitalCheckSubmission(endpointURL, dcd, returnSource);
 			}
 		} catch (Exception ex) {
 			ex.printStackTrace(System.out);
@@ -178,7 +181,127 @@ public class UploadAndExportController {
             ResponseEntity<JsonNode> response = new ResponseEntity<JsonNode>(exceptionNode, HttpStatus.INTERNAL_SERVER_ERROR);
             return response;
 		}
+    	returnSource.setId(1);
+    	JsonNode returnNode = mapper.valueToTree(returnSource);
     	ResponseEntity<JsonNode> response = new ResponseEntity<JsonNode>(returnNode, HttpStatus.OK);
     	return response;
+    }
+    
+    //Check the database for an entity using the repository. If exists, grab it
+    //For each source from configuration, check to see the status. If not sent, then make a new source and send
+    
+    
+    @GetMapping("submitEDRS2.0")
+    public ResponseEntity<JsonNode> submitEDRSRecord20(@RequestParam(required = true) String systemIdentifier,@RequestParam(required = true) String codeIdentifier,
+    		@RequestParam(defaultValue = "false") boolean createOnly) throws IOException {
+    	//Create Death Certificate
+    	DeathCertificateDocument dcd = null;
+		try {
+			dcd = fhirCMSToVRDRService.createDCDFromBaseFhirServer(systemIdentifier, codeIdentifier);
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+			return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+    	String VRDRJson = fhirCMSToVRDRService.getJsonParser().encodeResourceToString(dcd);
+		String XMLJson = fhirCMSToVRDRService.getXmlParser().encodeResourceToString(dcd);
+		System.out.println("VRDR Submission Document:");
+		System.out.println(VRDRJson);
+		System.out.println(XMLJson);
+    	ObjectMapper mapper = new ObjectMapper();
+    	//Check the database for an entity using the repository. If exists, grab it
+    	//If not, create it.
+		List<PatientSubmit> patientSubmitList = patientSubmitRepository.findByPatientIdentifierSystemAndPatientIdentifierCode(systemIdentifier, codeIdentifier);
+		PatientSubmit submitEntity = null;
+		if(patientSubmitList.isEmpty()) {
+			submitEntity = new PatientSubmit(systemIdentifier, codeIdentifier);
+		}
+		else {
+			submitEntity = patientSubmitList.get(0);
+		}
+		//For each source from configuration, check to see the status.
+		//If not sent, then make a new source and send
+		//Send based on mode: nightingale, or vitalcheck.
+		for(int i=0; i < submissionSourcesConfiguration.getSourceurl().size(); i++) {
+			String sourceurl = submissionSourcesConfiguration.getSourceurl().get(i);
+			String sourcemode = submissionSourcesConfiguration.getSourcemode().get(i);
+			SourceStatus source = null;
+			try {
+				source = submitEntity.getSources().stream()
+					.filter(s -> s.getUrl().compareTo(sourceurl) == 0).findFirst().get();
+			}
+			
+			catch(NoSuchElementException e) {
+				source = new SourceStatus(sourceurl);
+				submitEntity.getSources().add(source);
+			}
+			if(sourcemode.equalsIgnoreCase("nightingale")) {
+				source = handleNightingaleSubmission(sourceurl, dcd, source);
+			}
+		}
+		return null;
+    }
+    
+    private SourceStatus handleNightingaleSubmission(String sourceurl, DeathCertificateDocument dcd, SourceStatus source) throws IOException {
+    	if(source == null) {
+    		source = new SourceStatus(sourceurl);
+    	}
+    	String VRDRJson = fhirCMSToVRDRService.getJsonParser().encodeResourceToString(dcd);
+    	ResponseEntity<String> responseEntity = nightingaleSubmissionService.submitRecord(sourceurl, VRDRJson);
+		source.setResponseCode(Integer.toString(responseEntity.getStatusCodeValue()));
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode nightingaleResponse = mapper.readTree(responseEntity.getBody());
+		//Sometimes real response is embedded in a key name "PostEDRSResult"
+		if(responseEntity.getStatusCode().is2xxSuccessful()) {
+			if(nightingaleResponse.has("PostEDRSResult")) {
+				nightingaleResponse = mapper.readTree(nightingaleResponse.get("PostEDRSResult").asText());
+			}
+			Pattern pattern = Pattern.compile("CreatedID:(\\d+)");
+			String messageString = nightingaleResponse.get("message").asText().replaceAll(" ", "");
+			Matcher matcher = pattern.matcher(messageString);
+			matcher.matches();
+			String nightingaleId = matcher.group(1);
+			source.setIdentifier(nightingaleId);
+			//Update the decedent and composition back in the original system as well
+			fhirCMSToVRDRService.updateDecedentAndCompositionInCMS(sourceurl, nightingaleId, dcd);
+		}
+		else {
+			source.getError().add(nightingaleResponse.get("message").asText());
+		}
+		return source;
+    }
+    
+    private SourceStatus handleVitalCheckSubmission(String sourceurl, DeathCertificateDocument dcd, SourceStatus source) throws IOException {
+    	if(source == null) {
+    		source = new SourceStatus(sourceurl);
+    	}
+    	ResponseEntity<String> responseEntity = vitalcheckSubmissionService.submitRecord(sourceurl, dcd);
+		source.setResponseCode(Integer.toString(responseEntity.getStatusCodeValue()));
+		source.setStatus(Status.completed);
+		Bundle vitalCheckResponseBundle = (Bundle) fhirCMSToVRDRService.getJsonParser().parseResource(responseEntity.getBody());
+		for(BundleEntryComponent bec:vitalCheckResponseBundle.getEntry()) {
+			Resource resource = bec.getResource();
+			//If we find a message header, read the identifier out of the system
+			if(resource.getResourceType().equals(ResourceType.MessageHeader)) {
+				//Expecting the response to have an extension with the value of the id in it
+				MessageHeader messageHeader = (MessageHeader) resource;
+				Extension extension = messageHeader.getResponse().getExtensionFirstRep();
+				IntegerType integer = (IntegerType) extension.getValue();
+				String vitalcheckId = integer.asStringValue();
+				source.setIdentifier(vitalcheckId);
+				fhirCMSToVRDRService.updateDecedentAndCompositionInCMS(sourceurl, vitalcheckId, dcd);
+			}
+			//If we find an OperOutcome, read all the errors
+			if(resource.getResourceType().equals(ResourceType.OperationOutcome)) {
+				OperationOutcome operationOutcome = (OperationOutcome) resource;
+				for(Resource containedResource:operationOutcome.getContained()) {
+					if(containedResource.getResourceType().equals(ResourceType.DetectedIssue)){
+						DetectedIssue detectedIssue = (DetectedIssue)containedResource;
+						source.addError(detectedIssue.getCode().getText());
+					}
+				}
+			}
+		}
+		return source;
     }
 }

@@ -5,6 +5,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -16,6 +17,8 @@ import org.hl7.fhir.r4.model.Bundle.BundleEntryRequestComponent;
 import org.hl7.fhir.r4.model.Bundle.HTTPVerb;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.HumanName;
+import org.hl7.fhir.r4.model.IdType;
+import org.hl7.fhir.r4.model.Meta;
 import org.hl7.fhir.r4.model.Resource;
 
 import edu.gatech.VRDR.model.util.CommonUtil;
@@ -102,6 +105,9 @@ public class MDIToFhirCMSUtil {
 	
 	
 	public static Bundle addResourceToBundle(Bundle bundle,Resource resource) {
+		if(resource.getId() == null || resource.getId().isEmpty()) {
+			resource.setId(new IdType(UUID.randomUUID().toString()));
+		}
 		BundleEntryComponent bec = new BundleEntryComponent();
 		bec.setFullUrl(resource.getId());
 		bec.setRequest(new BundleEntryRequestComponent().setMethod(HTTPVerb.POST));
@@ -155,7 +161,7 @@ public class MDIToFhirCMSUtil {
 		Address returnAddress = new Address();
 		returnAddress.addLine(street);
 		returnAddress.setCity(city);
-		returnAddress.setCountry(county);
+		returnAddress.setDistrict(county);
 		returnAddress.setState(state);
 		returnAddress.setPostalCode(zip);
 		return returnAddress;

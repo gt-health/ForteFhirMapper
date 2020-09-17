@@ -22,21 +22,11 @@ public class NightingaleSubmissionService {
 		this.restTemplate = new RestTemplate();
 	}
 	
-	public JsonNode submitRecord(String POSTendpoint, String VRDRJson) {
+	public ResponseEntity<String> submitRecord(String POSTendpoint, String VRDRJson) {
 		System.out.println("Submitting to nightingale at endpoint:" + POSTendpoint);
-		JsonNode response = JsonNodeFactory.instance.objectNode();
 		ResponseEntity<String> POSTresponse
 		  = restTemplate.postForEntity(POSTendpoint, VRDRJson, String.class);
-		if(POSTresponse.getStatusCode() != HttpStatus.OK) {
-			return response;
-		}
-		ObjectMapper mapper = new ObjectMapper();
-		try {
-			response = mapper.readTree(POSTresponse.getBody());
-		} catch (IOException e) {
-			return response;
-		}
-		return response;
+		return POSTresponse;
 	}
 
 	public String getNightingaleURL() {

@@ -1,12 +1,13 @@
 package edu.gatech.Mapping.Util;
 
-import org.hl7.fhir.dstu2.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
+
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Resource;
+import org.hl7.fhir.r4.model.ResourceType;
 
 import edu.gatech.VRDR.model.DeathCertificateDocument;
 
@@ -49,7 +50,7 @@ public class FHIRCMSToVRDRUtil {
 	public static Patient findPatientinDCD(DeathCertificateDocument dcd) {
 		for(BundleEntryComponent bec:dcd.getEntry()) {
 			Resource resource = bec.getResource();
-			if(resource != null && resource.getResourceType().equals(ResourceType.PATIENT)) {
+			if(resource != null && resource.getResourceType().equals(ResourceType.Patient)) {
 				Patient patient = (Patient)resource;
 				return patient;
 			}
