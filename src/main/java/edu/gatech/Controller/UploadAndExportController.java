@@ -253,7 +253,7 @@ public class UploadAndExportController {
 		JsonNode jsonOutput = mapper.valueToTree(patientSubmitList);
 		ResponseEntity<JsonNode> returnResponse = new ResponseEntity<JsonNode>(jsonOutput, HttpStatus.OK);
 		returnResponse.getHeaders().add("Content-Type", "application/json");
-		return returnResponse;;
+		return returnResponse;
     }
     
     private SourceStatus handleNightingaleSubmission(String sourceurl, DeathCertificateDocument dcd, SourceStatus source) throws IOException {
