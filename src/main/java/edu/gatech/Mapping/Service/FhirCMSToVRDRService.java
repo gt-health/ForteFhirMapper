@@ -385,7 +385,7 @@ public class FhirCMSToVRDRService {
 			else {
 				newcac.setTime(new Date());
 			}
-			Reference certifierReference = new Reference(profiledPrac.getIdElement().getIdPart());
+			Reference certifierReference = new Reference(profiledPrac.getIdElement());
 			newcac.setParty(certifierReference);
 			deathCertificate.setAttester(new ArrayList<CompositionAttesterComponent>());
 			deathCertificate.addAttester(newcac);

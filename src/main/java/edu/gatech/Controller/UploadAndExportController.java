@@ -192,8 +192,16 @@ public class UploadAndExportController {
     
     
     @GetMapping("submitEDRS2.0")
-    public ResponseEntity<JsonNode> submitEDRSRecord20(@RequestParam(required = true) String systemIdentifier,@RequestParam(required = true) String codeIdentifier,
+    public ResponseEntity<JsonNode> submitEDRSRecord20(@RequestParam(required = false) String systemIdentifier,@RequestParam(required = false) String codeIdentifier,
     		@RequestParam(defaultValue = "false") boolean createOnly) throws IOException {
+    	ObjectMapper mapper = new ObjectMapper();
+    	if(systemIdentifier == null || codeIdentifier == null) {
+    		Iterable<PatientSubmit> repoEntity = patientSubmitRepository.findAll();
+    		JsonNode jsonOutput = mapper.valueToTree(repoEntity);
+    		ResponseEntity<JsonNode> returnResponse = new ResponseEntity<JsonNode>(jsonOutput, HttpStatus.OK);
+    		returnResponse.getHeaders().add("Content-Type", "application/json");
+    		return returnResponse;
+    	}
     	//Create Death Certificate
     	DeathCertificateDocument dcd = null;
 		try {
@@ -208,7 +216,6 @@ public class UploadAndExportController {
 		System.out.println("VRDR Submission Document:");
 		System.out.println(VRDRJson);
 		System.out.println(XMLJson);
-    	ObjectMapper mapper = new ObjectMapper();
     	//Check the database for an entity using the repository. If exists, grab it
     	//If not, create it.
 		List<PatientSubmit> patientSubmitList = patientSubmitRepository.findByPatientIdentifierSystemAndPatientIdentifierCode(systemIdentifier, codeIdentifier);
@@ -230,7 +237,6 @@ public class UploadAndExportController {
 				source = submitEntity.getSources().stream()
 					.filter(s -> s.getUrl().compareTo(sourceurl) == 0).findFirst().get();
 			}
-			
 			catch(NoSuchElementException e) {
 				source = new SourceStatus(sourceurl);
 				submitEntity.getSources().add(source);
@@ -238,8 +244,16 @@ public class UploadAndExportController {
 			if(sourcemode.equalsIgnoreCase("nightingale")) {
 				source = handleNightingaleSubmission(sourceurl, dcd, source);
 			}
+			else if(sourcemode.equalsIgnoreCase("vitalcheck")) {
+				source = handleVitalCheckSubmission(sourceurl, dcd, source);
+			}
+			submitEntity.getSources().add(source);
 		}
-		return null;
+		patientSubmitRepository.save(submitEntity);
+		JsonNode jsonOutput = mapper.valueToTree(patientSubmitList);
+		ResponseEntity<JsonNode> returnResponse = new ResponseEntity<JsonNode>(jsonOutput, HttpStatus.OK);
+		returnResponse.getHeaders().add("Content-Type", "application/json");
+		return returnResponse;;
     }
     
     private SourceStatus handleNightingaleSubmission(String sourceurl, DeathCertificateDocument dcd, SourceStatus source) throws IOException {
