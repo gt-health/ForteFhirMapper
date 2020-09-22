@@ -199,8 +199,9 @@ public class UploadAndExportController {
     	if(systemIdentifier == null || codeIdentifier == null) {
     		Iterable<PatientSubmit> repoEntity = patientSubmitRepository.findAll();
     		JsonNode jsonOutput = mapper.valueToTree(repoEntity);
-    		ResponseEntity<JsonNode> returnResponse = new ResponseEntity<JsonNode>(jsonOutput, HttpStatus.OK);
-    		returnResponse.getHeaders().add("Content-Type", "application/json");
+    		HttpHeaders responseHeaders = new HttpHeaders();
+    	    responseHeaders.set("Content-Type", "application/json");
+    		ResponseEntity<JsonNode> returnResponse = new ResponseEntity<JsonNode>(jsonOutput, responseHeaders, HttpStatus.OK);
     		return returnResponse;
     	}
     	//Create Death Certificate
