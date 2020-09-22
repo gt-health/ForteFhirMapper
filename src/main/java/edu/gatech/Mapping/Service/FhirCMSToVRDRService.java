@@ -134,8 +134,12 @@ public class FhirCMSToVRDRService {
 			Resource resource = bec.getResource();
 			if(resource.getResourceType().equals(ResourceType.Patient)) {
 				Patient patient = (Patient)resource;
-				patient.addIdentifier(new Identifier().setSystem(edrsSystemUrl).setValue(edrsId));
-				client.update().resource(patient).execute();
+				Identifier newIdentifier = new Identifier().setSystem(edrsSystemUrl).setValue(edrsId);
+				if(patient.getIdentifier().stream().anyMatch(identifier -> identifier.hasSystem() && identifier.getSystem().equals(newIdentifier.getSystem())
+						&& identifier.hasValue() && identifier.getValue().equals(newIdentifier.getValue()))) {
+					patient.addIdentifier(new Identifier().setSystem(edrsSystemUrl).setValue(edrsId));
+					client.update().resource(patient).execute();
+				}
 			}
 			if(resource.getResourceType().equals(ResourceType.Composition)) {
 				Composition composition = (Composition)resource;
@@ -385,7 +389,7 @@ public class FhirCMSToVRDRService {
 			else {
 				newcac.setTime(new Date());
 			}
-			Reference certifierReference = new Reference(profiledPrac.getIdElement());
+			Reference certifierReference = new Reference(profiledPrac.getResourceType().toString() + "/" + profiledPrac.getIdElement().getIdPart());
 			newcac.setParty(certifierReference);
 			deathCertificate.setAttester(new ArrayList<CompositionAttesterComponent>());
 			deathCertificate.addAttester(newcac);

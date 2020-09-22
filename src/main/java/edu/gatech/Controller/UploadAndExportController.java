@@ -21,6 +21,7 @@ import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -241,18 +242,21 @@ public class UploadAndExportController {
 				source = new SourceStatus(sourceurl);
 				submitEntity.getSources().add(source);
 			}
+			if(source.getStatus() == Status.completed) {
+				continue;
+			}
 			if(sourcemode.equalsIgnoreCase("nightingale")) {
 				source = handleNightingaleSubmission(sourceurl, dcd, source);
 			}
 			else if(sourcemode.equalsIgnoreCase("vitalcheck")) {
 				source = handleVitalCheckSubmission(sourceurl, dcd, source);
 			}
-			submitEntity.getSources().add(source);
 		}
 		patientSubmitRepository.save(submitEntity);
-		JsonNode jsonOutput = mapper.valueToTree(patientSubmitList);
+		JsonNode jsonOutput = mapper.valueToTree(submitEntity);
+		HttpHeaders responseHeaders = new HttpHeaders();
+	    responseHeaders.set("Content-Type", "application/json");
 		ResponseEntity<JsonNode> returnResponse = new ResponseEntity<JsonNode>(jsonOutput, HttpStatus.OK);
-		returnResponse.getHeaders().add("Content-Type", "application/json");
 		return returnResponse;
     }
     
@@ -278,9 +282,11 @@ public class UploadAndExportController {
 			source.setIdentifier(nightingaleId);
 			//Update the decedent and composition back in the original system as well
 			fhirCMSToVRDRService.updateDecedentAndCompositionInCMS(sourceurl, nightingaleId, dcd);
+			source.setStatus(Status.completed);
 		}
 		else {
 			source.getError().add(nightingaleResponse.get("message").asText());
+			source.setStatus(Status.error);
 		}
 		return source;
     }
