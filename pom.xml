@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>edu.gatech</groupId>
-  <artifactId>raven-mapper0api</artifactId>
+  <artifactId>raven-mapper-api</artifactId>
   <version>0.0.3-SNAPSHOT</version>
   <packaging>war</packaging>
 
