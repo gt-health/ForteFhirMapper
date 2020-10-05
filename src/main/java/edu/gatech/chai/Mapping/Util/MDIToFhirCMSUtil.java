@@ -1,4 +1,4 @@
-package edu.gatech.Mapping.Util;
+package edu.gatech.chai.Mapping.Util;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -15,13 +15,14 @@ import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryRequestComponent;
 import org.hl7.fhir.r4.model.Bundle.HTTPVerb;
+
+import edu.gatech.VRDR.model.util.CommonUtil;
+
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Meta;
 import org.hl7.fhir.r4.model.Resource;
-
-import edu.gatech.VRDR.model.util.CommonUtil;
 
 public class MDIToFhirCMSUtil {
 	public static List<String> dateFormatStrings = Arrays.asList("MM/dd/yyyy",

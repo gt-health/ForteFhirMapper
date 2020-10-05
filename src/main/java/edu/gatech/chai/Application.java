@@ -1,13 +1,13 @@
-package edu.gatech;
+package edu.gatech.chai;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.annotation.Bean;
 
-import edu.gatech.Mapping.Service.CanaryValidationService;
-import edu.gatech.Mapping.Service.NightingaleSubmissionService;
 import edu.gatech.VRDR.context.VRDRFhirContext;
+import edu.gatech.chai.Mapping.Service.CanaryValidationService;
+import edu.gatech.chai.Mapping.Service.NightingaleSubmissionService;
 
 @SpringBootApplication
 public class Application extends SpringBootServletInitializer{

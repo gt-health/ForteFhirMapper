@@ -1,4 +1,4 @@
-package edu.gatech.Controller;
+package edu.gatech.chai.Controller;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -39,19 +39,19 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 
-import edu.gatech.MDI.Model.MDIModelFields;
-import edu.gatech.Mapping.Service.CanaryValidationService;
-import edu.gatech.Mapping.Service.FhirCMSToVRDRService;
-import edu.gatech.Mapping.Service.NightingaleSubmissionService;
-import edu.gatech.Mapping.Service.VitalcheckSubmissionService;
-import edu.gatech.Mapping.Service.MDIToFhirCMSService;
-import edu.gatech.Submission.Configuration.SubmissionSourcesConfiguration;
-import edu.gatech.Submission.Entity.PatientSubmit;
-import edu.gatech.Submission.Entity.SourceStatus;
-import edu.gatech.Submission.Entity.Status;
-import edu.gatech.Submission.Repository.PatientSubmitRepository;
-import edu.gatech.Submission.Service.SubmitBundleService;
 import edu.gatech.VRDR.model.DeathCertificateDocument;
+import edu.gatech.chai.MDI.Model.MDIModelFields;
+import edu.gatech.chai.Mapping.Service.CanaryValidationService;
+import edu.gatech.chai.Mapping.Service.FhirCMSToVRDRService;
+import edu.gatech.chai.Mapping.Service.MDIToFhirCMSService;
+import edu.gatech.chai.Mapping.Service.NightingaleSubmissionService;
+import edu.gatech.chai.Mapping.Service.VitalcheckSubmissionService;
+import edu.gatech.chai.Submission.Configuration.SubmissionSourcesConfiguration;
+import edu.gatech.chai.Submission.Entity.PatientSubmit;
+import edu.gatech.chai.Submission.Entity.SourceStatus;
+import edu.gatech.chai.Submission.Entity.Status;
+import edu.gatech.chai.Submission.Repository.PatientSubmitRepository;
+import edu.gatech.chai.Submission.Service.SubmitBundleService;
 
 @Controller
 public class UploadAndExportController {
@@ -202,6 +202,7 @@ public class UploadAndExportController {
     		HttpHeaders responseHeaders = new HttpHeaders();
     	    responseHeaders.set("Content-Type", "application/json");
     		ResponseEntity<JsonNode> returnResponse = new ResponseEntity<JsonNode>(jsonOutput, responseHeaders, HttpStatus.OK);
+
     		return returnResponse;
     	}
     	//Create Death Certificate

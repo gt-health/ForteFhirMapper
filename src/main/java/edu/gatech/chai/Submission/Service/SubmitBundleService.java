@@ -1,4 +1,4 @@
-package edu.gatech.Submission.Service;
+package edu.gatech.chai.Submission.Service;
 
 import java.nio.charset.Charset;
 

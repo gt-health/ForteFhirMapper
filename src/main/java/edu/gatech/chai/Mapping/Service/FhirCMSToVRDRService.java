@@ -1,4 +1,4 @@
-package edu.gatech.Mapping.Service;
+package edu.gatech.chai.Mapping.Service;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -43,7 +43,6 @@ import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor;
 import ca.uhn.fhir.rest.client.interceptor.LoggingInterceptor;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
-import edu.gatech.Mapping.Util.FHIRCMSToVRDRUtil;
 import edu.gatech.VRDR.context.VRDRFhirContext;
 import edu.gatech.VRDR.model.AutopsyPerformedIndicator;
 import edu.gatech.VRDR.model.BirthRecordIdentifier;
@@ -96,6 +95,7 @@ import edu.gatech.VRDR.model.util.ExaminerContactedUtil;
 import edu.gatech.VRDR.model.util.InjuryIncidentUtil;
 import edu.gatech.VRDR.model.util.MannerOfDeathUtil;
 import edu.gatech.VRDR.model.util.TobaccoUseContributedToDeathUtil;
+import edu.gatech.chai.Mapping.Util.FHIRCMSToVRDRUtil;
 
 @Service
 public class FhirCMSToVRDRService {

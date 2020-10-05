@@ -1,4 +1,4 @@
-package edu.gatech.Mapping.Util;
+package edu.gatech.chai.Mapping.Util;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

@@ -1,4 +1,4 @@
-package edu.gatech.Submission.Entity;
+package edu.gatech.chai.Submission.Entity;
 
 import java.io.Serializable;
 import java.util.ArrayList;

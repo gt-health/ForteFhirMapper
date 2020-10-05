@@ -1,4 +1,4 @@
-package edu.gatech.Mapping.Service;
+package edu.gatech.chai.Mapping.Service;
 
 import java.math.BigDecimal;
 import java.text.ParseException;
@@ -43,9 +43,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import ca.uhn.fhir.parser.IParser;
-import edu.gatech.MDI.Model.MDIModelFields;
-import edu.gatech.Mapping.Util.CommonMappingUtil;
-import edu.gatech.Mapping.Util.MDIToFhirCMSUtil;
 import edu.gatech.VRDR.context.VRDRFhirContext;
 import edu.gatech.VRDR.model.AutopsyPerformedIndicator;
 import edu.gatech.VRDR.model.CauseOfDeathCondition;
@@ -66,6 +63,9 @@ import edu.gatech.VRDR.model.InjuryLocation;
 import edu.gatech.VRDR.model.MannerOfDeath;
 import edu.gatech.VRDR.model.util.CommonUtil;
 import edu.gatech.VRDR.model.util.InjuryIncidentUtil;
+import edu.gatech.chai.MDI.Model.MDIModelFields;
+import edu.gatech.chai.Mapping.Util.CommonMappingUtil;
+import edu.gatech.chai.Mapping.Util.MDIToFhirCMSUtil;
 
 @Service
 public class MDIToFhirCMSService {

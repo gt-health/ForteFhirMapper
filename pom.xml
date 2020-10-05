@@ -3,8 +3,8 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>edu.gatech</groupId>
-  <artifactId>ForteFhirMapper</artifactId>
-  <version>0.0.2-SNAPSHOT</version>
+  <artifactId>raven-mapper0api</artifactId>
+  <version>0.0.3-SNAPSHOT</version>
   <packaging>war</packaging>
 
   <name>OpenMDIFhirMapping</name>

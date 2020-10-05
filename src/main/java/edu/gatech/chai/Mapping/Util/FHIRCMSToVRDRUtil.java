@@ -1,6 +1,9 @@
-package edu.gatech.Mapping.Util;
+package edu.gatech.chai.Mapping.Util;
 
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
+
+import edu.gatech.VRDR.model.DeathCertificateDocument;
+
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 
@@ -8,8 +11,6 @@ import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.ResourceType;
-
-import edu.gatech.VRDR.model.DeathCertificateDocument;
 
 public class FHIRCMSToVRDRUtil {
 	private static final Coding caseNumberCodingType = new Coding("urn:mdi:temporary:code","1000007","Case Number");

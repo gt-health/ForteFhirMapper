@@ -1,4 +1,4 @@
-package edu.gatech.Mapping.Service;
+package edu.gatech.chai.Mapping.Service;
 
 import java.io.IOException;
 

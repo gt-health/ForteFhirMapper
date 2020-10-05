@@ -1,4 +1,4 @@
-package edu.gatech.Mapping.Service;
+package edu.gatech.chai.Mapping.Service;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -40,9 +40,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import edu.gatech.Mapping.Util.FHIRCMSToVRDRUtil;
 import edu.gatech.VRDR.context.VRDRFhirContext;
 import edu.gatech.VRDR.model.DeathCertificateDocument;
+import edu.gatech.chai.Mapping.Util.FHIRCMSToVRDRUtil;
 
 @Service
 public class VitalcheckSubmissionService {

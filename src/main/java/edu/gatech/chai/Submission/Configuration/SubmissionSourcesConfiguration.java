@@ -1,4 +1,4 @@
-package edu.gatech.Submission.Configuration;
+package edu.gatech.chai.Submission.Configuration;
 
 import java.util.List;
 
