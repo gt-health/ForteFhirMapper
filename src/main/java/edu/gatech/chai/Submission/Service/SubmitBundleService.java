@@ -19,11 +19,11 @@ import ca.uhn.fhir.rest.api.Constants;
 @Service
 public class SubmitBundleService {
 	private RestTemplate rest;
-	@Value("${submission.url}")
+	@Value("${fhircms.url}")
 	private String url;
-	@Value("${submission.basicAuth.username}")
+	@Value("${fhircms.basicAuth.username}")
 	private String basicUsername;
-	@Value("${submission.basicAuth.password}")
+	@Value("${fhircms.basicAuth.password}")
 	private String basicPassword;
 	
 	public SubmitBundleService() {

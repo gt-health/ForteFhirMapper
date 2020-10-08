@@ -15,8 +15,6 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 public class NightingaleSubmissionService {
 
 	private RestTemplate restTemplate;
-	@Value("${nightingale.url}")
-	private String nightingaleURL;
 	
 	public NightingaleSubmissionService() {
 		this.restTemplate = new RestTemplate();
@@ -29,11 +27,4 @@ public class NightingaleSubmissionService {
 		return POSTresponse;
 	}
 
-	public String getNightingaleURL() {
-		return nightingaleURL;
-	}
-
-	public void setNightingaleURL(String nightingaleURL) {
-		this.nightingaleURL = nightingaleURL;
-	}
 }
